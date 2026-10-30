@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DCE3820D-5B7A-4B3A-BBF0-A98243727627}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Varta", "src\Varta\Varta.csproj", "{1F3BF240-5B63-4D57-93E6-788C1650CA2A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{47D6EB5A-EF5E-4B14-A581-15E9575CC4C6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Varta.Tests", "tests\Varta.Tests\Varta.Tests.csproj", "{BBFB0AC3-55C0-4C0B-8575-22516133C43C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1F3BF240-5B63-4D57-93E6-788C1650CA2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F3BF240-5B63-4D57-93E6-788C1650CA2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F3BF240-5B63-4D57-93E6-788C1650CA2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F3BF240-5B63-4D57-93E6-788C1650CA2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BBFB0AC3-55C0-4C0B-8575-22516133C43C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BBFB0AC3-55C0-4C0B-8575-22516133C43C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BBFB0AC3-55C0-4C0B-8575-22516133C43C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BBFB0AC3-55C0-4C0B-8575-22516133C43C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1F3BF240-5B63-4D57-93E6-788C1650CA2A} = {DCE3820D-5B7A-4B3A-BBF0-A98243727627}
+		{BBFB0AC3-55C0-4C0B-8575-22516133C43C} = {47D6EB5A-EF5E-4B14-A581-15E9575CC4C6}
+	EndGlobalSection
+EndGlobal
