@@ -165,13 +165,19 @@ namespace Varta.Platform
 
             // 7. Автозапуск
             AutostartInfo a = c.Autostart;
-            if (a != null)
+            if (Paths.IsTemporaryLocation)
+                list.Add(Item("autostart", "Автозапуск", HealthState.Error,
+                    "Програму запущено з архіву або тимчасової папки — автозапуск і налаштування звідси не збережуться. Розпакуйте папку Varta (наприклад, у C:\\Varta) і запустіть Varta.exe звідти."));
+            else if (a != null)
             {
                 if (!string.IsNullOrEmpty(a.Error))
                     list.Add(Item("autostart", "Автозапуск", HealthState.Warn, "Не вдалося перевірити: " + a.Error));
                 else if (!a.Enabled)
                     list.Add(Item("autostart", "Автозапуск", HealthState.Warn,
                         "Вимкнено — після перезавантаження ПК програма не запуститься сама.", "autostart-on", "Увімкнути"));
+                else if (a.OtherCopy)
+                    list.Add(Item("autostart", "Автозапуск", HealthState.Warn,
+                        "Разом із Windows запускається інша копія програми: " + a.RegisteredExe + ". Натисніть «Виправити», щоб запускалася ця.", "autostart-on", "Виправити"));
                 else if (a.DisabledInTaskManager)
                     list.Add(Item("autostart", "Автозапуск", HealthState.Warn,
                         "Увімкнено, але вимкнено у «Диспетчері завдань → Автозавантаження».", "autostart-on", "Виправити"));
@@ -179,7 +185,7 @@ namespace Varta.Platform
                     list.Add(Item("autostart", "Автозапуск", HealthState.Warn,
                         "Шлях у запису автозапуску застарів (папку переносили).", "autostart-on", "Виправити"));
                 else
-                    list.Add(Item("autostart", "Автозапуск", HealthState.Ok, "Програма запускається разом із Windows."));
+                    list.Add(Item("autostart", "Автозапуск", HealthState.Ok, "Програма запускається разом із Windows з цієї папки."));
             }
 
             // 8. Адміністратор
@@ -195,8 +201,9 @@ namespace Varta.Platform
 
             // 9. Папка даних
             if (!Paths.IsPortableFolder)
-                list.Add(Item("data-dir", "Папка даних", HealthState.Info,
-                    "Папка програми захищена від запису — налаштування та журнал зберігаються в " + Paths.DataDir));
+                list.Add(Item("data-dir", "Папка даних", HealthState.Warn,
+                    "У папку програми не можна записувати, тому налаштування, звуки й журнал зберігаються в " + Paths.DataDir +
+                    ". Щоб усе лежало поруч із Varta.exe, перемістіть папку Varta туди, де є право запису (наприклад, C:\\Varta) — дані перенесуться самі."));
 
             return list;
         }
@@ -228,12 +235,13 @@ namespace Varta.Platform
                 res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Error, "Не знайдено активного пристрою виводу звуку (колонки/навушники)."));
             else
             {
-                string vol = "Гучність Windows " + (int)Math.Round(a.MasterVolume * 100) + "%" + (a.Muted ? ", звук вимкнено (mute)" : "") + ".";
-                bool low = a.Muted || a.MasterVolume * 100 < 10;
-                if (low && !s.BoostMasterVolume)
-                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Warn, vol + " Оголошення можуть бути не чутні — увімкніть автопідняття гучності.", "goto-sound", "Налаштувати"));
-                else if (low)
-                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Info, vol + " Під час тривоги гучність буде піднято автоматично."));
+                int win = (int)Math.Round(a.MasterVolume * 100);
+                string vol = "Гучність Windows " + win + "%" + (a.Muted ? ", звук вимкнено (mute)" : "") +
+                             "; оголошення звучить на " + s.AnnounceVolumePercent + "% від неї.";
+                if (a.Muted || win == 0)
+                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Warn, vol + " ВАРТА не змінює гучність Windows, тому голос зараз не буде чутно."));
+                else if (win < 10)
+                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Info, vol + " Оголошення будуть ледь чутні."));
                 else
                     res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Ok, vol));
             }
