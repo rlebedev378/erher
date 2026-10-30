@@ -180,9 +180,6 @@ namespace Varta.Ui
                 VolumePercent = s.AnnounceVolumePercent,
                 Duck = duck && s.DuckMusic,
                 KeepRatio = s.MusicDuckPercent / 100f,
-                Boost = duck && s.BoostMasterVolume,
-                MinMaster = s.MinMasterVolumePercent / 100f,
-                Unmute = s.UnmuteMaster,
                 Tag = tag
             };
         }
@@ -240,7 +237,11 @@ namespace Varta.Ui
         public string SetAutostart(bool on)
         {
             string err = Autostart.Set(on, Paths.ExePath);
-            Log.Info(err == null ? (on ? "Автозапуск увімкнено." : "Автозапуск вимкнено.") : "Автозапуск: помилка — " + err);
+            Log.Info(err == null ? (on ? "Автозапуск увімкнено: " + Autostart.BuildCommand(Paths.ExePath) : "Автозапуск вимкнено.") : "Автозапуск: помилка — " + err);
+            var h = AutostartChanged;
+            if (h != null) h();
+            var h2 = StateChanged;
+            if (h2 != null) h2();
             return err;
         }
 
@@ -356,7 +357,8 @@ namespace Varta.Ui
 
             AudioStatus a = AudioDucker.Query();
             sb.AppendLine("ЗВУК: пристроїв виводу: " + a.DeviceCount + "; типовий пристрій: " + (a.DeviceAvailable ? "є" : "НЕМАЄ") +
-                          (a.DeviceAvailable ? "; гучність " + (int)Math.Round(a.MasterVolume * 100) + "%" + (a.Muted ? ", mute" : "") : "") +
+                          (a.DeviceAvailable ? "; гучність Windows " + (int)Math.Round(a.MasterVolume * 100) + "%" + (a.Muted ? ", mute" : "") +
+                                               " (ВАРТА її не змінює); оголошення — " + s.AnnounceVolumePercent + "% від неї" : "") +
                           (string.IsNullOrEmpty(a.Error) ? "" : "; помилка: " + a.Error));
             var files = new Dictionary<string, string>
             {
