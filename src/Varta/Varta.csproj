@@ -12,9 +12,9 @@
     <Prefer32Bit>false</Prefer32Bit>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\varta.ico</ApplicationIcon>
-    <Version>1.0.2</Version>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
+    <Version>1.0.3</Version>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.3.0</FileVersion>
     <Product>ВАРТА</Product>
     <Description>ВАРТА — сповіщення про повітряну тривогу (Харків)</Description>
     <DebugType>embedded</DebugType>
@@ -32,6 +32,11 @@
   <ItemGroup>
     <!-- ThirdParty/NLayer: керований декодер MP3 (MIT), вбудований без змін; ліцензія лежить поруч із кодом. -->
     <Compile Update="ThirdParty\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Стандартні голосові файли: програма повертає їх у папку sounds, якщо їх там немає. -->
+    <EmbeddedResource Include="Assets\default_sounds\*.mp3" LogicalName="Varta.DefaultSounds.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
