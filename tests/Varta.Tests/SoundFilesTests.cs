@@ -6,6 +6,8 @@ using Xunit;
 
 namespace Varta.Tests
 {
+    // Paths — статичний стан: тести, що змінюють корені, виконуються послідовно в одній колекції.
+    [Collection("Paths")]
     public sealed class SoundFilesTests : IDisposable
     {
         readonly string _root = Path.Combine(Path.GetTempPath(), "varta-test-" + Guid.NewGuid().ToString("N"));

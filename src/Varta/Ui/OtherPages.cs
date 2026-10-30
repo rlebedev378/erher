@@ -29,6 +29,7 @@ namespace Varta.Ui
         readonly RichTextBox _events = new RichTextBox();
         readonly Button _pauseBtn;
         int _lastLogCount = -1;
+        LogEntry _lastLogEntry;
 
         public event Action<string> Navigate;
 
@@ -127,6 +128,13 @@ namespace Varta.Ui
 
         void OnHealthAction(string id)
         {
+            // Дія перебудовує список (і кнопку, яку щойно натиснули) — виконуємо після завершення кліку.
+            try { BeginInvoke(new Action(() => RunHealthAction(id))); }
+            catch (InvalidOperationException) { RunHealthAction(id); }
+        }
+
+        void RunHealthAction(string id)
+        {
             switch (id)
             {
                 case "resume": _c.Monitor.Resume("вручну"); break;
@@ -150,11 +158,12 @@ namespace Varta.Ui
             EngineState st = eng.State;
             DateTime now = DateTime.UtcNow;
 
-            if (_c.Monitor.IsPaused)
+            DateTime? pausedUntil = _c.Monitor.PausedUntilUtc;   // знімок: потік опитування може зняти паузу будь-якої миті
+            if (pausedUntil.HasValue)
             {
                 m.Paused = true;
                 m.Title = "МОНІТОРИНГ ПРИЗУПИНЕНО";
-                m.Subtitle = "Тривоги зараз не відстежуються. Автоматичне відновлення о " + _c.Monitor.PausedUntilUtc.Value.ToLocalTime().ToString("HH:mm") + ".";
+                m.Subtitle = "Тривоги зараз не відстежуються. Автоматичне відновлення о " + pausedUntil.Value.ToLocalTime().ToString("HH:mm") + ".";
                 m.Meta1 = "Натисніть «Відновити моніторинг», щоб увімкнути негайно.";
                 return m;
             }
@@ -194,8 +203,11 @@ namespace Varta.Ui
         void RefreshEvents()
         {
             List<LogEntry> all = Log.Snapshot();
-            if (all.Count == _lastLogCount) return;
+            LogEntry last = all.Count > 0 ? all[all.Count - 1] : null;
+            // Журнал у пам'яті обмежено 800 записами: кількість перестає рости, тому порівнюємо й останній запис.
+            if (all.Count == _lastLogCount && ReferenceEquals(last, _lastLogEntry)) return;
             _lastLogCount = all.Count;
+            _lastLogEntry = last;
             _events.SuspendLayout();
             _events.Clear();
             foreach (LogEntry e in all.Skip(Math.Max(0, all.Count - 12)).Reverse())

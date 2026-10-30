@@ -48,7 +48,13 @@ namespace Varta.Core
         public bool IsStale()
         {
             if (!State.LastOkUtc.HasValue) return true;
-            return (_now() - State.LastOkUtc.Value).TotalSeconds > Settings.StaleAfterSeconds;
+            return (_now() - State.LastOkUtc.Value).TotalSeconds > EffectiveStaleSeconds(Settings);
+        }
+
+        /// <summary>Не менше двох інтервалів опитування — інакше при рідкому опитуванні дані «застарівали» б між перевірками.</summary>
+        public static int EffectiveStaleSeconds(AppSettings s)
+        {
+            return Math.Max(s.StaleAfterSeconds, 2 * s.PollIntervalSeconds + 15);
         }
 
         public List<EngineEvent> OnReading(SourceReading r)

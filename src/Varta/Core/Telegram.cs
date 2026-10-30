@@ -262,23 +262,34 @@ namespace Varta.Core
 
                 DateTime now = res.ServerDateUtc ?? localNow;
                 DateTime prevNewest = cache.NewestUtc;
-                DateTime target = cache.Initialized ? prevNewest : now - TimeSpan.FromHours(s.TelegramBackfillHours);
+                // Тривога без відбою діє до TelegramEventMaxAgeHours, тож історія потрібна щонайменше за цей час.
+                DateTime windowStart = now - TimeSpan.FromHours(Math.Max(s.TelegramBackfillHours, s.TelegramEventMaxAgeHours));
+                DateTime target = cache.Initialized && prevNewest > windowStart ? prevNewest : windowStart;
                 Merge(cache, msgs, s);
 
                 DateTime oldest = msgs.Min(m => m.TimeUtc);
                 long minId = msgs.Min(m => m.Id);
+                SourceReading gap = null;
                 for (int page = 0; page < MaxBackfillPages && oldest > target && minId > 1; page++)
                 {
                     HttpResult older = _http.Get(PageUrl(ch, minId), Headers, 12000);
-                    if (!older.Ok) break;
+                    if (!older.Ok) { gap = SourceHelpers.FromHttpFailure(SourceName, older, localNow); break; }
                     List<TgMessage> prev = TelegramPageParser.Parse(older.Body, ch);
-                    if (prev.Count == 0) break;
+                    if (prev.Count == 0) break;   // раніших повідомлень немає — історію прочитано до початку каналу
                     Merge(cache, prev, s);
                     DateTime po = prev.Min(m => m.TimeUtc);
                     long pid = prev.Min(m => m.Id);
-                    if (pid >= minId) break;
+                    if (pid >= minId) { gap = SourceReading.Fail(SourceName, ErrorKind.BadData, "канал повертає ту саму сторінку", localNow); break; }
                     oldest = po;
                     minId = pid;
+                }
+                if (gap != null)
+                {
+                    // Пропущена сторінка могла містити початок тривоги — без повної історії «відбою» не стверджуємо, повторимо наступного разу.
+                    cache.Initialized = false;
+                    st.Error = "не вдалося завантажити історію каналу: " + gap.Error;
+                    if (firstFail == null) firstFail = SourceReading.Fail(SourceName, gap.ErrorKind, st.Error, localNow);
+                    continue;
                 }
                 cache.Initialized = true;
 

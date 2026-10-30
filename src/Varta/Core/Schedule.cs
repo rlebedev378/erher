@@ -33,13 +33,14 @@ namespace Varta.Core
         {
             if (!s.VoiceEnabled) return false;
             if (!s.VoiceOnlyInWorkHours) return true;
-            if (!DayEnabled(s.WorkDays, localNow.DayOfWeek)) return false;
+            bool today = DayEnabled(s.WorkDays, localNow.DayOfWeek);
             TimeSpan start, end;
-            if (!TryParseTime(s.WorkStart, out start) || !TryParseTime(s.WorkEnd, out end)) return true;
+            if (!TryParseTime(s.WorkStart, out start) || !TryParseTime(s.WorkEnd, out end) || start == end) return today;
             TimeSpan t = localNow.TimeOfDay;
-            if (start == end) return true;
-            if (start < end) return t >= start && t < end;
-            return t >= start || t < end;
+            if (start < end) return today && t >= start && t < end;
+            // Зміна через північ: час після півночі належить до зміни, що почалася напередодні.
+            if (t >= start) return today;
+            return t < end && DayEnabled(s.WorkDays, localNow.AddDays(-1).DayOfWeek);
         }
 
         public static bool DailyReportDue(AppSettings s, DateTime localNow, DateTime lastSentDate)
