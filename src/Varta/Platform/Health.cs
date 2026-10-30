@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.NetworkInformation;
 using Varta.Core;
 
@@ -142,6 +143,25 @@ namespace Varta.Platform
                 }
             }
 
+            // 4б. Ціль летить у наш бік (канали про рух цілей)
+            if (!s.NearbyEnabled)
+                list.Add(Item("nearby", "Ціль у наш бік", HealthState.Info, "Стеження за рухом цілей вимкнено.", "goto-sources", "Налаштувати"));
+            else
+            {
+                List<NearbyChannelStatus> ns = m.Nearby.GetStatus();
+                NearbyMatch lm = m.Nearby.LastMatch;
+                string last = lm == null ? "" : " Останній збіг: " + lm.TimeUtc.ToLocalTime().ToString("HH:mm") + " «" + lm.Headline + "».";
+                if (ns.Count == 0)
+                    list.Add(Item("nearby", "Ціль у наш бік", HealthState.Info, "Ще не перевірялось."));
+                else if (ns.Exists(x => !x.Ok))
+                    list.Add(Item("nearby", "Ціль у наш бік", HealthState.Warn,
+                        string.Join("; ", ns.Where(x => !x.Ok).Select(x => "@" + x.Channel + ": " + x.Error).ToArray()) + "." + last, "goto-sources", "Налаштувати"));
+                else
+                    list.Add(Item("nearby", "Ціль у наш бік", HealthState.Ok,
+                        "Стежимо за " + string.Join(", ", ns.Select(x => "@" + x.Channel).ToArray()) +
+                        " (останній допис " + Ago(ns.Max(x => x.NewestMessageUtc ?? DateTime.UtcNow)) + ")." + last));
+            }
+
             // 5. Годинник
             SourceReading any = m.LastReading;
             if (any != null && any.ServerDateUtc.HasValue)
@@ -229,6 +249,7 @@ namespace Varta.Platform
             AddFile(s, AlertEventKind.YellowStarted, "Жовтий", s.SoundYellow, used, missing);
             AddFile(s, AlertEventKind.YellowFromRed, "Зниження", s.SoundYellowFromRed, used, missing);
             AddFile(s, AlertEventKind.AllClear, "Відбій", s.SoundClear, used, missing);
+            if (s.NearbyEnabled) AddFile(s, AlertEventKind.ThreatNearby, "Ціль у наш бік", s.SoundNearby, used, missing);
             if (missing.Count > 0)
                 res.Add(Item("audio-files", "Файли оголошень", HealthState.Error,
                     "Не знайдено: " + string.Join(", ", missing.ToArray()) + ". Замість голосу прозвучить резервний сигнал.", "goto-sound", "Вказати файли"));

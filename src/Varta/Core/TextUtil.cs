@@ -57,22 +57,27 @@ namespace Varta.Core
             return false;
         }
 
-        /// <summary>Нормалізація для пошуку: нижній регістр, апострофи, «м. », підкреслення з хештегів, зайві пробіли.</summary>
+        /// <summary>Нормалізація для пошуку: нижній регістр, ё→е, апострофи, «м. », підкреслення з хештегів, зайві пробіли.</summary>
         public static string Norm(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
-            string t = s.ToLowerInvariant();
+            string t = s.ToLowerInvariant().Replace('ё', 'е');
             t = t.Replace('’', '\'').Replace('ʼ', '\'').Replace('`', '\'').Replace('\u00a0', ' ').Replace('\u3164', ' ').Replace('_', ' ');
             t = Regex.Replace(t, @"м\.\s*", "м.");
             t = Regex.Replace(t, @"\s+", " ").Trim();
             return t;
         }
 
-        /// <summary>Пошук цілого виразу (з межами слів) у нормалізованому тексті.</summary>
+        /// <summary>Пошук цілого виразу (з межами слів) у нормалізованому тексті. «*» у кінці слова — будь-яке закінчення.</summary>
         public static bool ContainsPhrase(string normText, string keyword)
         {
             string k = Norm(keyword);
             if (k.Length == 0 || string.IsNullOrEmpty(normText)) return false;
+            if (k.IndexOf('*') >= 0)
+            {
+                Regex w = WildcardPhrase(k);
+                return w != null && w.IsMatch(normText);
+            }
             int from = 0;
             while (true)
             {
@@ -90,6 +95,29 @@ namespace Varta.Core
         {
             foreach (string k in SplitKeywords(keywords)) if (ContainsPhrase(normText, k)) return true;
             return false;
+        }
+
+        static readonly Dictionary<string, Regex> Wildcards = new Dictionary<string, Regex>();
+
+        /// <summary>«холодн* гор*» → «Холодна гора», «Холодную гору»: слово із «*» має починатися з основи, решта — будь-які літери.</summary>
+        static Regex WildcardPhrase(string k)
+        {
+            lock (Wildcards)
+            {
+                Regex r;
+                if (Wildcards.TryGetValue(k, out r)) return r;
+                var parts = new List<string>();
+                foreach (string w in k.Split(' '))
+                {
+                    string stem = w.TrimEnd('*');
+                    if (stem.Length == 0) continue;   // окрема «*» збігалася б із будь-яким текстом
+                    parts.Add(Regex.Escape(stem) + (w.EndsWith("*") ? @"[\p{L}\p{N}]*" : ""));
+                }
+                r = parts.Count == 0 ? null
+                    : new Regex(@"(?<![\p{L}\p{N}])" + string.Join(@"\s+", parts.ToArray()) + @"(?![\p{L}\p{N}])", RegexOptions.CultureInvariant);
+                Wildcards[k] = r;
+                return r;
+            }
         }
 
         public static string HtmlToText(string html)

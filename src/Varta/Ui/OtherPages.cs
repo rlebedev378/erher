@@ -51,6 +51,7 @@ namespace Varta.Ui
             testMenu.Items.Add("Червоний рівень (тривога)", null, delegate { _c.RaiseTest(AlertEventKind.RedStarted); });
             testMenu.Items.Add("Жовтий рівень", null, delegate { _c.RaiseTest(AlertEventKind.YellowStarted); });
             testMenu.Items.Add("Відбій тривоги", null, delegate { _c.RaiseTest(AlertEventKind.AllClear); });
+            testMenu.Items.Add("Ціль летить у наш бік", null, delegate { _c.RaiseTest(AlertEventKind.ThreatNearby); });
             test.Click += delegate { testMenu.Show(test, new Point(0, test.Height)); };
 
             var pauseMenu = new ContextMenuStrip { Font = Theme.F(9.5f) };

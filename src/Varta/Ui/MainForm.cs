@@ -211,6 +211,8 @@ namespace Varta.Ui
             if (!s.UseAlertsInUa && !s.UseTelegram) w.Add("Не ввімкнено жодного джерела даних — тривоги не відстежуватимуться.");
             if (s.UseAlertsInUa && string.IsNullOrWhiteSpace(s.AlertsInUaToken) && !s.UseTelegram) w.Add("Для alerts.in.ua не вказано ключ, а Telegram-канали вимкнено.");
             if (s.UseTelegram && TextUtil.SplitChannels(s.TelegramChannels).Count == 0) w.Add("Не вказано жодного коректного Telegram-каналу.");
+            if (s.NearbyEnabled && (TextUtil.SplitChannels(s.NearbyChannels).Count == 0 || TextUtil.SplitKeywords(s.NearbyKeywords).Count == 0))
+                w.Add("«Ціль летить у наш бік» увімкнено, але не вказано канал або слова для вашого району.");
             if (s.AdminEnabled && (string.IsNullOrWhiteSpace(s.AdminBotToken) || string.IsNullOrWhiteSpace(s.AdminChatId))) w.Add("Telegram-адміністратор увімкнено, але не вказано токен бота або ID чату.");
             if (s.VoiceEnabled)
             {
@@ -219,6 +221,7 @@ namespace Varta.Ui
                     { AlertEventKind.RedStarted, s.SoundRed }, { AlertEventKind.YellowStarted, s.SoundYellow },
                     { AlertEventKind.YellowFromRed, s.SoundYellowFromRed }, { AlertEventKind.AllClear, s.SoundClear }
                 };
+                if (s.NearbyEnabled) checks[AlertEventKind.ThreatNearby] = s.SoundNearby;
                 foreach (var kv in checks)
                     if ((RoutePolicy.Get(s, kv.Key) & Channel.Voice) != 0 && !System.IO.File.Exists(Paths.Resolve(kv.Value)))
                         w.Add("Не знайдено файл голосу для події «" + RoutePolicy.Title(kv.Key) + "»: " + (string.IsNullOrWhiteSpace(kv.Value) ? "(не вказано)" : kv.Value));

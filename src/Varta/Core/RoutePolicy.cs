@@ -9,7 +9,7 @@ namespace Varta.Core
         public static readonly AlertEventKind[] Order = new[]
         {
             AlertEventKind.RedStarted, AlertEventKind.RedFromYellow, AlertEventKind.YellowStarted,
-            AlertEventKind.YellowFromRed, AlertEventKind.AllClear, AlertEventKind.RedReminder,
+            AlertEventKind.YellowFromRed, AlertEventKind.AllClear, AlertEventKind.RedReminder, AlertEventKind.ThreatNearby,
             AlertEventKind.ConnectionLost, AlertEventKind.ConnectionRestored, AlertEventKind.AudioProblem,
             AlertEventKind.ConfigProblem, AlertEventKind.MonitoringPaused,
             AlertEventKind.MonitoringResumed, AlertEventKind.DailyReport
@@ -25,6 +25,7 @@ namespace Varta.Core
                 case AlertEventKind.YellowFromRed:
                 case AlertEventKind.AllClear:
                 case AlertEventKind.RedReminder:
+                case AlertEventKind.ThreatNearby:
                     return true;
                 default:
                     return false;
@@ -41,6 +42,7 @@ namespace Varta.Core
                 case AlertEventKind.YellowStarted:
                 case AlertEventKind.YellowFromRed:
                 case AlertEventKind.AllClear:
+                case AlertEventKind.ThreatNearby:
                     return all;
                 case AlertEventKind.RedReminder: return Channel.Voice | Channel.Tray;
                 case AlertEventKind.ConnectionLost:
@@ -114,6 +116,7 @@ namespace Varta.Core
                 case AlertEventKind.YellowFromRed: return "Зниження рівня: червоний → жовтий";
                 case AlertEventKind.AllClear: return "Відбій тривоги (зелений рівень)";
                 case AlertEventKind.RedReminder: return "Нагадування, поки триває тривога";
+                case AlertEventKind.ThreatNearby: return "Ціль летить у наш бік (канал про рух цілей)";
                 case AlertEventKind.ConnectionLost: return "Втрачено зв'язок із джерелом даних";
                 case AlertEventKind.ConnectionRestored: return "Зв'язок із джерелом відновлено";
                 case AlertEventKind.AudioProblem: return "Проблема зі звуком або файлами";

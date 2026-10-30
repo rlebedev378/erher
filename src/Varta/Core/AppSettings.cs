@@ -34,6 +34,17 @@ namespace Varta.Core
         public int FailuresBeforeLost = 4;
         public int StaleAfterSeconds = 120;
 
+        // ---- Ціль летить у наш бік: Telegram-канали про рух цілей ----
+        public bool NearbyEnabled = true;
+        public string NearbyChannels = "tlknewsua";
+        /// <summary>Наш район (біля Центрального ринку): слова через «|», «*» у кінці слова — будь-яке закінчення.</summary>
+        public string NearbyKeywords = DefaultNearbyKeywords;
+        public int NearbyRepeatMinutes = 2;
+
+        public const string DefaultNearbyKeywords =
+            "центральн* рын*|центральн* рин*|благбаз*|центр|центра|центре|центру|центром|центрі|южд|южн* вокзал*|південн* вокзал*|" +
+            "хг|холодн* гор*|москалев*|москалів*|левад*";
+
         // ---- Звук ----
         public bool VoiceEnabled = true;
         public string SoundRed = "sounds\\red_alert.mp3";
@@ -41,6 +52,7 @@ namespace Varta.Core
         public string SoundYellowFromRed = "sounds\\downgrade_yellow.mp3";
         public string SoundClear = "sounds\\all_clear.mp3";
         public string SoundReminder = "";
+        public string SoundNearby = "sounds\\threat_nearby.mp3";
         /// <summary>Гучність оголошення у % від поточної гучності Windows. Саму гучність Windows програма не змінює.</summary>
         public int AnnounceVolumePercent = 100;
         public int RepeatRed = 2;
@@ -74,6 +86,8 @@ namespace Varta.Core
         public string TextYellowFromRedBody = "Загроза зберігається. Залишайтеся уважними, будьте готові пройти в укриття.";
         public string TextClearTitle = "ВІДБІЙ ТРИВОГИ";
         public string TextClearBody = "Небезпеку знято. Дякуємо за організованість.";
+        public string TextNearbyTitle = "ЦІЛЬ ЛЕТИТЬ У НАШ БІК";
+        public string TextNearbyBody = "{detail}. Негайно пройдіть в укриття!";
 
         // ---- Адміністратор (Telegram-бот) ----
         public bool AdminEnabled = false;
@@ -117,6 +131,7 @@ namespace Varta.Core
             RepeatGapSeconds = Clamp(RepeatGapSeconds, 0, 30);
             ReminderMinutes = Clamp(ReminderMinutes, 0, 120);
             MusicDuckPercent = Clamp(MusicDuckPercent, 0, 80);
+            NearbyRepeatMinutes = Clamp(NearbyRepeatMinutes, 0, 30);
             BannerSeconds = Clamp(BannerSeconds, 5, 600);
             BannerHeight = Clamp(BannerHeight, 100, 400);
             LogRetentionDays = Clamp(LogRetentionDays, 1, 365);
@@ -124,6 +139,8 @@ namespace Varta.Core
             AlertsInUaToken = CleanToken(AlertsInUaToken);
             AdminBotToken = (AdminBotToken ?? "").Trim();
             AdminChatId = (AdminChatId ?? "").Trim();
+            NearbyChannels = NearbyChannels ?? "";
+            NearbyKeywords = (NearbyKeywords ?? "").Trim();
             if (string.IsNullOrWhiteSpace(CityDisplayName)) CityDisplayName = "Харків";
             if (!Schedule.IsTime(WorkStart)) WorkStart = "08:30";
             if (!Schedule.IsTime(WorkEnd)) WorkEnd = "20:00";

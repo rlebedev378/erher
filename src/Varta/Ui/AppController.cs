@@ -135,6 +135,7 @@ namespace Varta.Ui
                 case AlertEventKind.YellowFromRed: stored = s.SoundYellowFromRed; repeat = s.RepeatOther; break;
                 case AlertEventKind.AllClear: stored = s.SoundClear; repeat = s.RepeatOther; break;
                 case AlertEventKind.RedReminder: stored = string.IsNullOrWhiteSpace(s.SoundReminder) ? s.SoundRed : s.SoundReminder; repeat = 1; break;
+                case AlertEventKind.ThreatNearby: stored = s.SoundNearby; repeat = s.RepeatRed; break;
                 default: return;
             }
             string file = Paths.Resolve(stored);
@@ -150,7 +151,7 @@ namespace Varta.Ui
             AppSettings s = Settings;
             var files = new List<string>();
             if (s.VoiceEnabled)
-                foreach (string st in new[] { s.SoundRed, s.SoundYellow, s.SoundYellowFromRed, s.SoundClear, s.SoundReminder })
+                foreach (string st in new[] { s.SoundRed, s.SoundYellow, s.SoundYellowFromRed, s.SoundClear, s.SoundReminder, s.NearbyEnabled ? s.SoundNearby : "" })
                     if (!string.IsNullOrWhiteSpace(st)) files.Add(Paths.Resolve(st));
             Audio.Preload(files);
         }
@@ -333,6 +334,11 @@ namespace Varta.Ui
             }, done);
         }
 
+        public void TestNearby(string channels, string keywords, Action<string> done)
+        {
+            Background(delegate { return NearbyWatcher.Preview(Http, channels, keywords, DateTime.UtcNow); }, done);
+        }
+
         public void TestAdmin(string token, string chatId, Action<string> done)
         {
             Background(delegate
@@ -368,6 +374,7 @@ namespace Varta.Ui
                 { "Червоний рівень", s.SoundRed }, { "Жовтий рівень", s.SoundYellow },
                 { "Зниження до жовтого", s.SoundYellowFromRed }, { "Відбій", s.SoundClear }
             };
+            if (s.NearbyEnabled) files["Ціль у наш бік"] = s.SoundNearby;
             foreach (var kv in files)
             {
                 string full = Paths.Resolve(kv.Value);
@@ -404,6 +411,9 @@ namespace Varta.Ui
                     sb.AppendLine("  • @" + ch.Channel + ": " + (ch.Ok ? "OK, подій про місто: " + ch.Events : "ПРОБЛЕМА: " + ch.Error));
                 sb.AppendLine("  • Telegram → рівень: " + (r.Ok ? Lang.LevelShort(r.Level) : "н/д (" + r.Error + ")"));
             }
+            sb.AppendLine("  • Ціль у наш бік: " + (s.NearbyEnabled
+                ? NearbyWatcher.Preview(Http, s.NearbyChannels, s.NearbyKeywords, DateTime.UtcNow).Replace("\n", "\n    ")
+                : "вимкнено"));
             sb.AppendLine();
             sb.AppendLine("АДМІНІСТРАТОР: " + (s.AdminEnabled ? (Admin.IsConfigured(s) ? "налаштовано" : "увімкнено, але не заповнено") : "вимкнено"));
             sb.AppendLine("МОНІТОРИНГ: " + (Monitor.IsPaused ? "призупинено" : "працює") + "; стан рушія: " + Lang.LevelShort(Monitor.Engine.State.Level));

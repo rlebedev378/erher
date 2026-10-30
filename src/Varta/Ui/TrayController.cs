@@ -39,6 +39,7 @@ namespace Varta.Ui
             tests.DropDownItems.Add(MenuItem("Червоний рівень (тривога)", delegate { _c.RaiseTest(AlertEventKind.RedStarted); }));
             tests.DropDownItems.Add(MenuItem("Жовтий рівень", delegate { _c.RaiseTest(AlertEventKind.YellowStarted); }));
             tests.DropDownItems.Add(MenuItem("Відбій", delegate { _c.RaiseTest(AlertEventKind.AllClear); }));
+            tests.DropDownItems.Add(MenuItem("Ціль летить у наш бік", delegate { _c.RaiseTest(AlertEventKind.ThreatNearby); }));
             tests.DropDownItems.Add(new ToolStripSeparator());
             tests.DropDownItems.Add(MenuItem("Зупинити звук", delegate { _c.StopSound(); _c.Banners.Hide(); }));
             _menu.Items.Add(tests);

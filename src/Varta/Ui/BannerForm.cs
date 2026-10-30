@@ -123,14 +123,37 @@ namespace Varta.Ui
 
         public bool IsVisible { get { return _forms.Count > 0; } }
 
+        Notice _sticky;
+        AppSettings _stickySettings;
+
         public BannerManager()
         {
-            _timer.Tick += delegate { _timer.Stop(); Hide(); };
+            _timer.Tick += delegate { _timer.Stop(); RestoreSticky(); };
         }
 
         public void Show(Notice n, AppSettings s)
         {
-            Hide();
+            bool sticky = s.BannerStayUntilClear && !n.IsTechnical && !n.IsInfo && !n.Transient && (n.Level == AlertLevel.Red || n.Level == AlertLevel.Yellow);
+            if (sticky) { _sticky = n; _stickySettings = s; }
+            ShowForms(n, s);
+            _timer.Stop();
+            if (!sticky)
+            {
+                _timer.Interval = Math.Max(5, s.BannerSeconds) * 1000;
+                _timer.Start();
+            }
+        }
+
+        /// <summary>Тимчасовий банер зник — повертаємо банер тривоги, що має висіти до відбою.</summary>
+        void RestoreSticky()
+        {
+            CloseForms();
+            if (_sticky != null) ShowForms(_sticky, _stickySettings);
+        }
+
+        void ShowForms(Notice n, AppSettings s)
+        {
+            CloseForms();
             Screen[] screens = s.BannerAllScreens ? Screen.AllScreens : new[] { Screen.PrimaryScreen };
             foreach (Screen sc in screens)
             {
@@ -143,19 +166,18 @@ namespace Varta.Ui
                 }
                 catch (Exception ex) { Varta.Platform.Log.Error("Не вдалося показати банер", ex); }
             }
-
-            bool sticky = s.BannerStayUntilClear && !n.IsTechnical && !n.IsInfo && (n.Level == AlertLevel.Red || n.Level == AlertLevel.Yellow);
-            _timer.Stop();
-            if (!sticky)
-            {
-                _timer.Interval = Math.Max(5, s.BannerSeconds) * 1000;
-                _timer.Start();
-            }
         }
 
+        /// <summary>Сховати все: відбій, «Зупинити звук і сховати банер», хрестик на банері.</summary>
         public void Hide()
         {
+            _sticky = null;
             _timer.Stop();
+            CloseForms();
+        }
+
+        void CloseForms()
+        {
             foreach (BannerForm f in _forms)
             {
                 try { f.Close(); f.Dispose(); } catch { }

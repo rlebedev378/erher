@@ -15,6 +15,8 @@ namespace Varta.Core
         public bool IsTest;
         public bool IsTechnical;
         public bool IsInfo;
+        /// <summary>Короткочасне попередження: банер зникає сам навіть під час тривоги.</summary>
+        public bool Transient;
     }
 
     public static class Lang
@@ -72,6 +74,8 @@ namespace Varta.Core
                     Alert(n, AlertLevel.Clear, "🟢", s.TextClearTitle, s.TextClearBody, s, e); break;
                 case AlertEventKind.RedReminder:
                     Alert(n, AlertLevel.Red, "🔴", s.TextRedTitle + " (нагадування)", s.TextRedBody, s, e); break;
+                case AlertEventKind.ThreatNearby:
+                    Alert(n, AlertLevel.Red, "🎯", s.TextNearbyTitle, s.TextNearbyBody, s, e); n.Transient = true; break;
                 case AlertEventKind.ConnectionLost:
                     Tech(n, "⚠️", "Втрачено зв'язок із джерелом даних", e.Message); break;
                 case AlertEventKind.ConnectionRestored:

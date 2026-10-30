@@ -28,7 +28,8 @@ namespace Varta.Core
         ConfigProblem,
         MonitoringPaused,
         MonitoringResumed,
-        DailyReport
+        DailyReport,
+        ThreatNearby
     }
 
     [Flags]

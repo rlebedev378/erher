@@ -394,13 +394,13 @@ namespace Varta.Ui
         }
 
         /// <summary>Поле для результату перевірки (✓ / ✗).</summary>
-        public Label Result()
+        public Label Result(int height = 52)
         {
             var l = new Label { AutoSize = false, Font = Theme.F(9.5f), ForeColor = Theme.Muted, BackColor = Color.Transparent };
-            l.SetBounds(LabelX, _y, DesignW - 2 * LabelX, 52);
+            l.SetBounds(LabelX, _y, DesignW - 2 * LabelX, height);
             Card.Controls.Add(l);
             Stretch(l);
-            _y += 58;
+            _y += height + 6;
             return l;
         }
 

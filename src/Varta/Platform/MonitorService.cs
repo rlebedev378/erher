@@ -11,6 +11,7 @@ namespace Varta.Platform
         readonly Func<AppSettings> _cfg;
         readonly AlertsInUaSource _aiu;
         readonly TelegramSource _tg;
+        readonly NearbyWatcher _nearby;
         readonly object _lock = new object();
         readonly Dictionary<string, SourceReading> _bySource = new Dictionary<string, SourceReading>();
         readonly ManualResetEvent _wake = new ManualResetEvent(false);
@@ -30,6 +31,7 @@ namespace Varta.Platform
         public AudioStatus Audio = new AudioStatus();
 
         public TelegramSource Telegram { get { return _tg; } }
+        public NearbyWatcher Nearby { get { return _nearby; } }
         public bool IsPaused { get { return PausedUntilUtc.HasValue; } }
 
         public MonitorService(Func<AppSettings> cfg, IHttp http)
@@ -38,6 +40,7 @@ namespace Varta.Platform
             Engine = new AlertEngine(cfg(), () => DateTime.UtcNow);
             _aiu = new AlertsInUaSource(cfg, http, () => DateTime.UtcNow);
             _tg = new TelegramSource(cfg, http, () => DateTime.UtcNow);
+            _nearby = new NearbyWatcher(cfg, http, () => DateTime.UtcNow);
         }
 
         public void Start()
@@ -164,7 +167,22 @@ namespace Varta.Platform
                 Log.Info("Подія: " + e.Kind + (string.IsNullOrEmpty(e.Detail) ? "" : " — " + e.Detail));
                 Raise(e);
             }
+            PollNearby();
             Fire();
+        }
+
+        void PollNearby()
+        {
+            List<NearbyMatch> hits;
+            try { hits = _nearby.Poll(); }
+            catch (Exception ex) { Log.Error("Збій перевірки каналів про рух цілей", ex); return; }
+            foreach (NearbyMatch h in hits)
+            {
+                string what = "«" + h.Headline + "» (@" + h.Channel + ", " + h.TimeUtc.ToLocalTime().ToString("HH:mm") + ")";
+                if (!h.Announce) { Log.Info("Ще одне повідомлення про ціль у наш бік (повторно не оголошуємо): " + what); continue; }
+                Log.Info("Подія: ThreatNearby — " + what + ", слово «" + h.Keyword + "»");
+                Raise(new EngineEvent { Kind = AlertEventKind.ThreatNearby, AtUtc = DateTime.UtcNow, Detail = what, Source = "@" + h.Channel, Message = h.Text });
+            }
         }
 
         void Raise(EngineEvent e)

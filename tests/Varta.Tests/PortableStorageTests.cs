@@ -133,7 +133,7 @@ namespace Varta.Tests
             Directory.CreateDirectory(Path.Combine(_app, "sounds"));
             File.WriteAllText(Path.Combine(_app, "sounds", "red_alert.mp3"), "MY RECORDING");
 
-            Assert.Equal(3, SoundFiles.EnsureDefaults());
+            Assert.Equal(4, SoundFiles.EnsureDefaults());
             Assert.Equal("MY RECORDING", File.ReadAllText(Path.Combine(_app, "sounds", "red_alert.mp3")));
             string shipped = Path.Combine(AppContext.BaseDirectory, "Fixtures", "default_sounds", "yellow_alert.mp3");
             Assert.Equal(File.ReadAllBytes(shipped), File.ReadAllBytes(Path.Combine(_app, "sounds", "yellow_alert.mp3")));
