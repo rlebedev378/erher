@@ -34,6 +34,8 @@ namespace Varta.Ui
 
         public event Action SettingsApplied;
         public event Action StateChanged;
+        /// <summary>Автозапуск змінено (з будь-якої вкладки) — щоб інші вкладки показали актуальний стан.</summary>
+        public event Action AutostartChanged;
 
         public AppController(AppSettings settings, List<string> warnings, bool settingsExisted)
         {
@@ -180,9 +182,6 @@ namespace Varta.Ui
                 VolumePercent = s.AnnounceVolumePercent,
                 Duck = duck && s.DuckMusic,
                 KeepRatio = s.MusicDuckPercent / 100f,
-                Boost = duck && s.BoostMasterVolume,
-                MinMaster = s.MinMasterVolumePercent / 100f,
-                Unmute = s.UnmuteMaster,
                 Tag = tag
             };
         }
@@ -240,7 +239,11 @@ namespace Varta.Ui
         public string SetAutostart(bool on)
         {
             string err = Autostart.Set(on, Paths.ExePath);
-            Log.Info(err == null ? (on ? "Автозапуск увімкнено." : "Автозапуск вимкнено.") : "Автозапуск: помилка — " + err);
+            Log.Info(err == null ? (on ? "Автозапуск увімкнено: " + Autostart.BuildCommand(Paths.ExePath) : "Автозапуск вимкнено.") : "Автозапуск: помилка — " + err);
+            var h = AutostartChanged;
+            if (h != null) h();
+            var h2 = StateChanged;
+            if (h2 != null) h2();
             return err;
         }
 
@@ -351,12 +354,14 @@ namespace Varta.Ui
             sb.AppendLine("ВАРТА " + AppInfo.Version + " — діагностика " + DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss"));
             sb.AppendLine("ОС: " + Environment.OSVersion + "; .NET: " + Environment.Version + "; 64-бітний процес: " + Environment.Is64BitProcess);
             sb.AppendLine("Програма: " + Paths.ExePath);
-            sb.AppendLine("Папка даних: " + Paths.DataDir + (Paths.IsPortableFolder ? " (переносна)" : " (папка програми недоступна для запису)"));
+            sb.AppendLine("Папка даних: " + Paths.DataDir + (Paths.IsPortableFolder ? " (папка програми)" : " (папка програми недоступна для запису)"));
+            sb.AppendLine("Налаштування: " + Paths.SettingsFile + (File.Exists(Paths.SettingsFile) ? "" : " (ще не збережено)") + "; звуки: " + Paths.SoundsDir);
             sb.AppendLine();
 
             AudioStatus a = AudioDucker.Query();
             sb.AppendLine("ЗВУК: пристроїв виводу: " + a.DeviceCount + "; типовий пристрій: " + (a.DeviceAvailable ? "є" : "НЕМАЄ") +
-                          (a.DeviceAvailable ? "; гучність " + (int)Math.Round(a.MasterVolume * 100) + "%" + (a.Muted ? ", mute" : "") : "") +
+                          (a.DeviceAvailable ? "; гучність Windows " + (int)Math.Round(a.MasterVolume * 100) + "%" + (a.Muted ? ", mute" : "") +
+                                               " (ВАРТА її не змінює); оголошення — " + s.AnnounceVolumePercent + "% від неї" : "") +
                           (string.IsNullOrEmpty(a.Error) ? "" : "; помилка: " + a.Error));
             var files = new Dictionary<string, string>
             {
@@ -378,8 +383,11 @@ namespace Varta.Ui
             sb.AppendLine();
 
             AutostartInfo au = Autostart.Query(Paths.ExePath);
-            sb.AppendLine("АВТОЗАПУСК: " + (au.Enabled ? "увімкнено" : "вимкнено") + (au.Enabled && !au.PathMatches ? " (шлях застарів)" : "") +
+            sb.AppendLine("АВТОЗАПУСК: " + (au.Effective ? "працює" : (au.Enabled ? "запис є, але не діє" : "вимкнено")) +
+                          (au.OtherCopy ? " (вказує на іншу копію програми)" : (au.Enabled && !au.PathMatches ? " (шлях застарів)" : "")) +
                           (au.DisabledInTaskManager ? " (вимкнено в Диспетчері завдань)" : "") + (string.IsNullOrEmpty(au.Error) ? "" : "; помилка: " + au.Error));
+            if (au.Enabled) sb.AppendLine("  • Команда: " + au.Command);
+            if (Paths.IsTemporaryLocation) sb.AppendLine("  • УВАГА: програму запущено з тимчасової папки (архіву) — автозапуск і налаштування не збережуться.");
             sb.AppendLine();
 
             sb.AppendLine("ДЖЕРЕЛА ДАНИХ:");

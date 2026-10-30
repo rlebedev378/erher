@@ -120,7 +120,8 @@ namespace Varta.Platform
     }
 
     /// <summary>
-    /// Приглушує гучність усіх інших програм (музика) на час оголошення та повертає її назад.
+    /// Приглушує гучність усіх інших програм (музика) на час оголошення — відносно їхньої поточної гучності — та повертає її назад.
+    /// Загальну гучність Windows і режим «Без звуку» не змінює.
     /// Початкові рівні зберігаються у файлі відновлення — якщо програму буде закрито аварійно,
     /// наступний запуск поверне музику на місце.
     /// </summary>
@@ -132,9 +133,6 @@ namespace Varta.Platform
         readonly object _lock = new object();
         readonly Dictionary<string, float> _byInstance = new Dictionary<string, float>();
         readonly Dictionary<string, float> _byIdent = new Dictionary<string, float>();
-        float _savedMaster = -1f;
-        bool _savedMute;
-        bool _masterTouched;
         static readonly int MyPid = Process.GetCurrentProcess().Id;
 
         public bool IsDucked { get; private set; }
@@ -193,8 +191,8 @@ namespace Varta.Platform
             }
         }
 
-        /// <summary>Знижує гучність інших програм. Безпечно викликати повторно (підхоплює нові сесії).</summary>
-        public string Duck(float keepRatio, bool boostMaster, float minMaster, bool unmute)
+        /// <summary>Знижує гучність інших програм до keepRatio від їхньої поточної. Безпечно викликати повторно (підхоплює нові сесії).</summary>
+        public string Duck(float keepRatio)
         {
             lock (_lock)
             {
@@ -202,25 +200,6 @@ namespace Varta.Platform
                 {
                     IMMDeviceEnumerator en = Enumerator();
                     bool persist = false;
-
-                    if (boostMaster)
-                    {
-                        IMMDevice def;
-                        if (en.GetDefaultAudioEndpoint(EDataFlow.Render, ERole.Multimedia, out def) == 0 && def != null)
-                        {
-                            var ep = Activate<IAudioEndpointVolume>(def);
-                            if (ep != null)
-                            {
-                                float cur; bool muted;
-                                ep.GetMasterVolumeLevelScalar(out cur);
-                                ep.GetMute(out muted);
-                                if (!_masterTouched) { _savedMaster = cur; _savedMute = muted; _masterTouched = true; persist = true; }
-                                Guid g = Guid.Empty;
-                                if (muted && unmute) ep.SetMute(false, ref g);
-                                if (cur < minMaster) ep.SetMasterVolumeLevelScalar(minMaster, ref g);
-                            }
-                        }
-                    }
 
                     foreach (IMMDevice dev in ActiveRenderDevices(en))
                     {
@@ -258,20 +237,19 @@ namespace Varta.Platform
         {
             lock (_lock)
             {
-                try { RestoreCore(_byInstance, _byIdent, _masterTouched, _savedMaster, _savedMute); }
+                try { if (_byInstance.Count > 0 || _byIdent.Count > 0) RestoreCore(_byInstance, _byIdent, false, -1f, false); }
                 catch (Exception ex) { Log.Warn("Не вдалося повернути гучність: " + ex.Message); }
                 finally
                 {
                     _byInstance.Clear();
                     _byIdent.Clear();
-                    _masterTouched = false;
-                    _savedMaster = -1f;
                     IsDucked = false;
                     DeleteRecovery();
                 }
             }
         }
 
+        /// <param name="master">Лише для файлу відновлення від версій до 1.0.3, які піднімали гучність Windows.</param>
         static void RestoreCore(Dictionary<string, float> byInstance, Dictionary<string, float> byIdent, bool master, float masterVol, bool masterMute)
         {
             IMMDeviceEnumerator en = Enumerator();
@@ -347,9 +325,6 @@ namespace Varta.Platform
                 foreach (var kv in _byIdent) n[kv.Key] = kv.Value;
                 d["instances"] = i;
                 d["idents"] = n;
-                d["masterTouched"] = _masterTouched;
-                d["master"] = _savedMaster;
-                d["mute"] = _savedMute;
                 File.WriteAllText(Paths.RecoveryFile, MiniJson.Serialize(d, false));
             }
             catch { }
