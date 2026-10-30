@@ -169,14 +169,13 @@ namespace Varta.Ui
             f.Finish();
 
             CardBuilder v2 = NewCard("Гучність і музика",
-                "Під час оголошення музика в салоні тихішає, а потім повертається до колишньої гучності. Працює з будь-яким плеєром або браузером.");
-            v2.Num("Гучність оголошення", 10, 100, s => s.AnnounceVolumePercent, (s, v) => s.AnnounceVolumePercent = v, "%", null);
+                "ВАРТА не змінює гучність Windows і не вимикає режим «Без звуку»: оголошення звучить відносно поточної гучності Windows. " +
+                "Наприклад, якщо в Windows 20%, а тут 50%, оголошення пролунає вдвічі тихіше за звук Windows. " +
+                "Музика на час оголошення тихішає відносно її поточної гучності, а потім повертається як була. Працює з будь-яким плеєром або браузером.");
+            v2.Num("Гучність оголошення", 10, 100, s => s.AnnounceVolumePercent, (s, v) => s.AnnounceVolumePercent = v, "% від гучності Windows",
+                "100% — так само голосно, як інші звуки Windows; менше — тихіше.");
             v2.Check("Приглушувати музику під час оголошення", s => s.DuckMusic, (s, v) => s.DuckMusic = v, null);
-            v2.Num("Залишати музиці", 0, 80, s => s.MusicDuckPercent, (s, v) => s.MusicDuckPercent = v, "% її гучності", "0 — повна тиша, 10 — ледь чутно.");
-            v2.Check("Піднімати гучність Windows під час оголошення, якщо вона низька", s => s.BoostMasterVolume, (s, v) => s.BoostMasterVolume = v,
-                "Після оголошення гучність повертається як була.");
-            v2.Num("Мінімальна гучність Windows", 10, 100, s => s.MinMasterVolumePercent, (s, v) => s.MinMasterVolumePercent = v, "%", null);
-            v2.Check("Вмикати звук, якщо в Windows увімкнено «Без звуку» (mute)", s => s.UnmuteMaster, (s, v) => s.UnmuteMaster = v, null);
+            v2.Num("Залишати музиці", 0, 80, s => s.MusicDuckPercent, (s, v) => s.MusicDuckPercent = v, "% її поточної гучності", "0 — повна тиша, 10 — ледь чутно.");
             v2.Finish();
 
             CardBuilder sch = NewCard("Розклад голосових оголошень",
