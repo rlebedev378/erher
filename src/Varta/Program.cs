@@ -73,6 +73,8 @@ namespace Varta
 
             List<string> warnings;
             bool existed;
+            string migrated = Paths.MigrateLegacyData();
+            int restoredSounds = SoundFiles.EnsureDefaults();
             AppSettings settings = SettingsStore.Load(out warnings, out existed);
 
             using (var app = new AppController(settings, warnings, existed))
@@ -97,7 +99,12 @@ namespace Varta
                     t.Start();
                 }
 
-                Autostart.RepairIfNeeded(Paths.ExePath);
+                if (migrated != null) Log.Info(migrated);
+                if (restoredSounds > 0) Log.Info("Відновлено стандартні звукові файли в папці sounds: " + restoredSounds + ".");
+                if (Autostart.RemoveDownloadMark(Paths.ExePath))
+                    Log.Info("З Varta.exe знято позначку «завантажено з Інтернету» — автозапуск не зупинятиметься на попередженні безпеки Windows.");
+                string repaired = Autostart.RepairIfNeeded(Paths.ExePath);
+                if (repaired != null) Log.Info(repaired);
                 app.Start();
 
                 string page = Value(args, "--page=");
@@ -109,10 +116,12 @@ namespace Varta
                     app.RaiseTest(k);
                 }
 
-                bool hidden = launchedByAutostart && settings.StartMinimized && !app.FirstRun;
+                bool temporary = Paths.IsTemporaryLocation;
+                bool hidden = launchedByAutostart && settings.StartMinimized && !app.FirstRun && !temporary;
                 if (!hidden)
                 {
                     main.Show();
+                    if (temporary) main.Shown += delegate { WarnTemporaryLocation(main); };
                     if (app.FirstRun) main.Shown += delegate { FirstRun(app, main); };
                 }
 
