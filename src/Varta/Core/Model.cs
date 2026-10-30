@@ -5,14 +5,14 @@ namespace Varta.Core
     public static class AppInfo
     {
         public const string Name = "ВАРТА";
-        public const string Version = "1.0.2";
+        public const string Version = "1.0.3";
         public const string Tagline = "Сповіщення про повітряну тривогу";
     }
 
     /// <summary>Рівень небезпеки для міста: зелений / жовтий / червоний.</summary>
     public enum AlertLevel { Unknown = 0, Clear = 1, Yellow = 2, Red = 3 }
 
-    public enum ErrorKind { None = 0, Network, Timeout, Unauthorized, RateLimited, ServerError, BadData, Stale, NotConfigured }
+    public enum ErrorKind { None = 0, Network, Timeout, Unauthorized, RateLimited, ServerError, BadData, Stale, NotConfigured, Forbidden }
 
     public enum AlertEventKind
     {
