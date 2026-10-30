@@ -169,14 +169,13 @@ namespace Varta.Ui
             f.Finish();
 
             CardBuilder v2 = NewCard("Гучність і музика",
-                "Під час оголошення музика в салоні тихішає, а потім повертається до колишньої гучності. Працює з будь-яким плеєром або браузером.");
-            v2.Num("Гучність оголошення", 10, 100, s => s.AnnounceVolumePercent, (s, v) => s.AnnounceVolumePercent = v, "%", null);
+                "ВАРТА не змінює гучність Windows і не вимикає режим «Без звуку»: оголошення звучить відносно поточної гучності Windows. " +
+                "Наприклад, якщо в Windows 20%, а тут 50%, оголошення пролунає вдвічі тихіше за звук Windows. " +
+                "Музика на час оголошення тихішає відносно її поточної гучності, а потім повертається як була. Працює з будь-яким плеєром або браузером.");
+            v2.Num("Гучність оголошення", 10, 100, s => s.AnnounceVolumePercent, (s, v) => s.AnnounceVolumePercent = v, "% від гучності Windows",
+                "100% — так само голосно, як інші звуки Windows; менше — тихіше.");
             v2.Check("Приглушувати музику під час оголошення", s => s.DuckMusic, (s, v) => s.DuckMusic = v, null);
-            v2.Num("Залишати музиці", 0, 80, s => s.MusicDuckPercent, (s, v) => s.MusicDuckPercent = v, "% її гучності", "0 — повна тиша, 10 — ледь чутно.");
-            v2.Check("Піднімати гучність Windows під час оголошення, якщо вона низька", s => s.BoostMasterVolume, (s, v) => s.BoostMasterVolume = v,
-                "Після оголошення гучність повертається як була.");
-            v2.Num("Мінімальна гучність Windows", 10, 100, s => s.MinMasterVolumePercent, (s, v) => s.MinMasterVolumePercent = v, "%", null);
-            v2.Check("Вмикати звук, якщо в Windows увімкнено «Без звуку» (mute)", s => s.UnmuteMaster, (s, v) => s.UnmuteMaster = v, null);
+            v2.Num("Залишати музиці", 0, 80, s => s.MusicDuckPercent, (s, v) => s.MusicDuckPercent = v, "% її поточної гучності", "0 — повна тиша, 10 — ледь чутно.");
             v2.Finish();
 
             CardBuilder sch = NewCard("Розклад голосових оголошень",
@@ -301,6 +300,7 @@ namespace Varta.Ui
     public sealed class SystemPage : SettingsPage
     {
         CheckBox _auto;
+        bool _autoLoaded;
         TextBox _diag;
 
         public override string PageTitle { get { return "Система"; } }
@@ -309,17 +309,24 @@ namespace Varta.Ui
         public SystemPage(AppController c) : base(c)
         {
             CardBuilder st = NewCard("Запуск", null);
-            _auto = st.Check("Запускати ВАРТУ разом із Windows (рекомендовано)", s => Autostart.Query(Paths.ExePath).Enabled, (s, v) => { },
-                "Працює без прав адміністратора. Щоб ПК вмикався одразу в потрібний обліковий запис, налаштуйте автоматичний вхід у Windows.");
+            _auto = st.Check("Запускати ВАРТУ разом із Windows (рекомендовано)", s => _autoLoaded = Autostart.Query(Paths.ExePath).Effective, (s, v) => { },
+                "Працює без прав адміністратора (запис у реєстрі поточного користувача). Якщо папку перенести, шлях оновиться сам під час наступного запуску. " +
+                "Щоб ПК вмикався одразу в потрібний обліковий запис, налаштуйте автоматичний вхід у Windows.");
+            c.AutostartChanged += delegate { Silently(() => _auto.Checked = _autoLoaded = Autostart.Query(Paths.ExePath).Effective); };
             st.Check("Запускатись згорнутою в трей", s => s.StartMinimized, (s, v) => s.StartMinimized = v, null);
             st.Check("Хрестик закриває вікно в трей (програма продовжує працювати)", s => s.CloseToTray, (s, v) => s.CloseToTray = v, "Повністю вийти можна через значок у трей → «Вийти».");
             st.Num("Зберігати журнал", 1, 365, s => s.LogRetentionDays, (s, v) => s.LogRetentionDays = v, "днів", null);
             st.Finish();
 
+            string where = Paths.IsTemporaryLocation
+                ? "   (УВАГА: тимчасова папка — розпакуйте архів, інакше дані не збережуться)"
+                : (Paths.IsPortableFolder ? "" : "   (у папку програми не можна записувати — дані лежать тут)");
             CardBuilder fold = NewCard("Папка програми й перенесення",
-                "ВАРТА переносна: усі налаштування, звуки та журнал лежать у її папці. Щоб перенести на інший комп'ютер — скопіюйте всю папку й запустіть Varta.exe. Автозапуск оновиться сам.");
-            Label path = UiKit.Lbl("Папка: " + Paths.DataDir + (Paths.IsPortableFolder ? "" : "   (папка програми захищена від запису)"), 9.5f, false, Theme.Text);
+                "ВАРТА переносна: налаштування (settings.json), звуки (sounds) і журнал (logs) лежать у її папці поруч із Varta.exe. " +
+                "Щоб перенести на інший комп'ютер — скопіюйте всю папку й запустіть Varta.exe. Автозапуск оновиться сам.");
+            Label path = UiKit.Lbl("Папка: " + Paths.DataDir + where, 9.5f, false, Paths.IsPortableFolder && !Paths.IsTemporaryLocation ? Theme.Text : Theme.Red);
             path.AutoSize = false;
+            path.AutoEllipsis = true;
             fold.Custom(path, 22);
             Button o1 = UiKit.Btn("Відкрити папку програми", false);
             Button o2 = UiKit.Btn("Папка зі звуками", false);
