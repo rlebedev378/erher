@@ -120,7 +120,8 @@ namespace Varta.Platform
     }
 
     /// <summary>
-    /// Приглушує гучність усіх інших програм (музика) на час оголошення та повертає її назад.
+    /// Приглушує гучність усіх інших програм (музика) на час оголошення — відносно їхньої поточної гучності — та повертає її назад.
+    /// Загальну гучність Windows і режим «Без звуку» не змінює.
     /// Початкові рівні зберігаються у файлі відновлення — якщо програму буде закрито аварійно,
     /// наступний запуск поверне музику на місце.
     /// </summary>
@@ -132,9 +133,6 @@ namespace Varta.Platform
         readonly object _lock = new object();
         readonly Dictionary<string, float> _byInstance = new Dictionary<string, float>();
         readonly Dictionary<string, float> _byIdent = new Dictionary<string, float>();
-        float _savedMaster = -1f;
-        bool _savedMute;
-        bool _masterTouched;
         static readonly int MyPid = Process.GetCurrentProcess().Id;
 
         public bool IsDucked { get; private set; }

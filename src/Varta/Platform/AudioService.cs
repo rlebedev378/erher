@@ -225,9 +225,6 @@ namespace Varta.Platform
         public int VolumePercent = 100;
         public bool Duck = true;
         public float KeepRatio = 0.1f;
-        public bool Boost = true;
-        public float MinMaster = 0.7f;
-        public bool Unmute = true;
         public string Tag = "";
         public bool Preview;
         public bool IsTest;
@@ -236,7 +233,8 @@ namespace Varta.Platform
 
     /// <summary>
     /// Черга оголошень на окремому потоці: нове оголошення перериває попереднє (завжди актуальне найновіше),
-    /// на час відтворення музика приглушується, після — гучність повертається.
+    /// на час відтворення музика приглушується відносно її поточної гучності, після — гучність повертається.
+    /// Гучність Windows не змінюється: оголошення звучить на VolumePercent % від неї.
     /// </summary>
     public sealed class AudioService : IDisposable
     {
@@ -320,7 +318,7 @@ namespace Varta.Platform
 
             if (r.Duck)
             {
-                string e = _ducker.Duck(r.KeepRatio, r.Boost, r.MinMaster, r.Unmute);
+                string e = _ducker.Duck(r.KeepRatio);
                 if (e != null) Raise("Не вдалося приглушити музику: " + e);
             }
 
@@ -330,7 +328,7 @@ namespace Varta.Platform
                 if (r.Duck && (DateTime.UtcNow - lastDuck).TotalMilliseconds > 1000)
                 {
                     lastDuck = DateTime.UtcNow;
-                    _ducker.Duck(r.KeepRatio, r.Boost, r.MinMaster, r.Unmute);
+                    _ducker.Duck(r.KeepRatio);
                 }
             };
 
