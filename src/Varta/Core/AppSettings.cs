@@ -41,16 +41,15 @@ namespace Varta.Core
         public string SoundYellowFromRed = "sounds\\downgrade_yellow.mp3";
         public string SoundClear = "sounds\\all_clear.mp3";
         public string SoundReminder = "";
+        /// <summary>Гучність оголошення у % від поточної гучності Windows. Саму гучність Windows програма не змінює.</summary>
         public int AnnounceVolumePercent = 100;
         public int RepeatRed = 2;
         public int RepeatOther = 1;
         public int RepeatGapSeconds = 3;
         public int ReminderMinutes = 0;
         public bool DuckMusic = true;
+        /// <summary>Скільки % від поточної гучності музики залишити на час оголошення.</summary>
         public int MusicDuckPercent = 10;
-        public bool BoostMasterVolume = true;
-        public int MinMasterVolumePercent = 70;
-        public bool UnmuteMaster = true;
 
         // ---- Розклад голосових оголошень ----
         public bool VoiceOnlyInWorkHours = false;
@@ -95,6 +94,14 @@ namespace Varta.Core
 
         public static int Clamp(int v, int min, int max) { return v < min ? min : (v > max ? max : v); }
 
+        /// <summary>Ключ, вставлений разом із лапками чи префіксом «Bearer », інакше сервер відповідає 401.</summary>
+        public static string CleanToken(string t)
+        {
+            t = (t ?? "").Trim().Trim('"', '\'').Trim();
+            if (t.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) t = t.Substring(7).Trim();
+            return t;
+        }
+
         public void Normalize()
         {
             PollIntervalSeconds = Clamp(PollIntervalSeconds, 10, 300);
@@ -110,12 +117,11 @@ namespace Varta.Core
             RepeatGapSeconds = Clamp(RepeatGapSeconds, 0, 30);
             ReminderMinutes = Clamp(ReminderMinutes, 0, 120);
             MusicDuckPercent = Clamp(MusicDuckPercent, 0, 80);
-            MinMasterVolumePercent = Clamp(MinMasterVolumePercent, 10, 100);
             BannerSeconds = Clamp(BannerSeconds, 5, 600);
             BannerHeight = Clamp(BannerHeight, 100, 400);
             LogRetentionDays = Clamp(LogRetentionDays, 1, 365);
 
-            AlertsInUaToken = (AlertsInUaToken ?? "").Trim();
+            AlertsInUaToken = CleanToken(AlertsInUaToken);
             AdminBotToken = (AdminBotToken ?? "").Trim();
             AdminChatId = (AdminChatId ?? "").Trim();
             if (string.IsNullOrWhiteSpace(CityDisplayName)) CityDisplayName = "Харків";
