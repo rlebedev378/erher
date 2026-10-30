@@ -219,7 +219,8 @@ namespace Varta.Ui
                 var checks = new Dictionary<AlertEventKind, string>
                 {
                     { AlertEventKind.RedStarted, s.SoundRed }, { AlertEventKind.YellowStarted, s.SoundYellow },
-                    { AlertEventKind.YellowFromRed, s.SoundYellowFromRed }, { AlertEventKind.AllClear, s.SoundClear }
+                    { AlertEventKind.YellowFromRed, s.SoundYellowFromRed }, { AlertEventKind.AllClear, s.SoundClear },
+                    { AlertEventKind.RedFromYellow, s.EscalationSound }
                 };
                 foreach (var kv in checks)
                     if ((RoutePolicy.Get(s, kv.Key) & Channel.Voice) != 0 && !System.IO.File.Exists(Paths.Resolve(kv.Value)))

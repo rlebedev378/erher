@@ -87,6 +87,22 @@ namespace Varta.Tests
         }
 
         [Fact]
+        public void Escalation_has_its_own_sound_that_defaults_to_the_red_file()
+        {
+            var s = new AppSettings();
+            Assert.Equal("", s.SoundRedFromYellow);
+            Assert.Equal(s.SoundRed, s.EscalationSound);
+            s.SoundRedFromYellow = "sounds\\raised.mp3";
+            Assert.Equal("sounds\\raised.mp3", s.EscalationSound);
+            AppSettings back = SettingsJson.FromJson(SettingsJson.ToJson(s), null);
+            Assert.Equal("sounds\\raised.mp3", back.SoundRedFromYellow);
+            Assert.DoesNotContain("EscalationSound", SettingsJson.ToJson(s));
+            Assert.Equal(AppSettings.DefaultNearbyTitle, new AppSettings().TextNearbyTitle);
+            Assert.Equal("РІВЕНЬ ПІДВИЩЕНО ДО ЧЕРВОНОГО", s.TextRedFromYellowTitle);
+            Assert.True(RoutePolicy.VoiceCapable(AlertEventKind.RedFromYellow));
+        }
+
+        [Fact]
         public void Removed_app_started_route_is_dropped_from_old_settings()
         {
             var w = new List<string>();

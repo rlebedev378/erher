@@ -24,15 +24,18 @@ namespace Varta.Ui
             Button tr = UiKit.Btn("Перевірити: червоний рівень", false);
             Button ty = UiKit.Btn("Перевірити: жовтий рівень", false);
             Button tc = UiKit.Btn("Перевірити: відбій", false);
+            Button tu = UiKit.Btn("Перевірити: підвищення жовтий → червоний", false);
             Button tn = UiKit.Btn("Перевірити: ціль летить у наш бік", false);
             Button ts = UiKit.Btn("Зупинити звук і сховати банер", false);
             tr.Click += delegate { C.RaiseTest(AlertEventKind.RedStarted); };
             ty.Click += delegate { C.RaiseTest(AlertEventKind.YellowStarted); };
             tc.Click += delegate { C.RaiseTest(AlertEventKind.AllClear); };
+            tu.Click += delegate { C.RaiseTest(AlertEventKind.RedFromYellow); };
             tn.Click += delegate { C.RaiseTest(AlertEventKind.ThreatNearby); };
             ts.Click += delegate { C.StopSound(); C.Banners.Hide(); };
             g.Buttons(tr, ty, tc);
-            g.Buttons(tn, ts);
+            g.Buttons(tu, tn);
+            g.Buttons(ts);
             g.Finish();
 
             CardBuilder r = NewCard("Повторення голосу та нагадування", null);
@@ -169,6 +172,8 @@ namespace Varta.Ui
                 "Вимкніть, якщо потрібні лише банер і текстові сповіщення. Окремі події можна вимкнути у вкладці «Сповіщення».");
             f.SoundRow("Червоний рівень (тривога)", s => s.SoundRed, (s, v) => s.SoundRed = v, "sounds\\red_alert.mp3", null);
             f.SoundRow("Жовтий рівень", s => s.SoundYellow, (s, v) => s.SoundYellow = v, "sounds\\yellow_alert.mp3", null);
+            f.SoundRow("Підвищення: жовтий → червоний", s => s.SoundRedFromYellow, (s, v) => s.SoundRedFromYellow = v, "",
+                "Звучить разом із банером «РІВЕНЬ ПІДВИЩЕНО ДО ЧЕРВОНОГО». Порожньо — використовується файл червоного рівня.", s => s.SoundRed, "файл червоного рівня");
             f.SoundRow("Зниження: червоний → жовтий", s => s.SoundYellowFromRed, (s, v) => s.SoundYellowFromRed = v, "sounds\\downgrade_yellow.mp3", null);
             f.SoundRow("Відбій тривоги", s => s.SoundClear, (s, v) => s.SoundClear = v, "sounds\\all_clear.mp3", null);
             f.SoundRow("Нагадування під час тривоги", s => s.SoundReminder, (s, v) => s.SoundReminder = v, "", "Порожньо — використовується файл червоного рівня.", s => s.SoundRed, "файл червоного рівня");

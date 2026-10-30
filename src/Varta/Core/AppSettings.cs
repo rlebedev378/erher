@@ -50,6 +50,8 @@ namespace Varta.Core
         public string SoundRed = "sounds\\red_alert.mp3";
         public string SoundYellow = "sounds\\yellow_alert.mp3";
         public string SoundYellowFromRed = "sounds\\downgrade_yellow.mp3";
+        /// <summary>Підвищення жовтий → червоний; порожньо — файл червоного рівня.</summary>
+        public string SoundRedFromYellow = "";
         public string SoundClear = "sounds\\all_clear.mp3";
         public string SoundReminder = "";
         /// <summary>Гучність оголошення у % від поточної гучності Windows. Саму гучність Windows програма не змінює.</summary>
@@ -108,6 +110,9 @@ namespace Varta.Core
 
         // ---- Маршрути сповіщень: подія → "voice,banner,tray,admin" ----
         public Dictionary<string, string> Routes = RoutePolicy.Defaults();
+
+        /// <summary>Файл, що звучить при підвищенні жовтий → червоний.</summary>
+        public string EscalationSound { get { return string.IsNullOrWhiteSpace(SoundRedFromYellow) ? SoundRed : SoundRedFromYellow; } }
 
         public static int Clamp(int v, int min, int max) { return v < min ? min : (v > max ? max : v); }
 

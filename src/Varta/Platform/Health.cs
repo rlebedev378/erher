@@ -252,6 +252,7 @@ namespace Varta.Platform
             var used = new List<string>();
             AddFile(s, AlertEventKind.RedStarted, "Червоний", s.SoundRed, used, missing);
             AddFile(s, AlertEventKind.YellowStarted, "Жовтий", s.SoundYellow, used, missing);
+            if (!string.IsNullOrWhiteSpace(s.SoundRedFromYellow)) AddFile(s, AlertEventKind.RedFromYellow, "Підвищення", s.SoundRedFromYellow, used, missing);
             AddFile(s, AlertEventKind.YellowFromRed, "Зниження", s.SoundYellowFromRed, used, missing);
             AddFile(s, AlertEventKind.AllClear, "Відбій", s.SoundClear, used, missing);
             if (missing.Count > 0)

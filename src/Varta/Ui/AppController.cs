@@ -134,8 +134,8 @@ namespace Varta.Ui
             int repeat;
             switch (k)
             {
-                case AlertEventKind.RedStarted:
-                case AlertEventKind.RedFromYellow: stored = s.SoundRed; repeat = s.RepeatRed; break;
+                case AlertEventKind.RedStarted: stored = s.SoundRed; repeat = s.RepeatRed; break;
+                case AlertEventKind.RedFromYellow: stored = s.EscalationSound; repeat = s.RepeatRed; break;
                 case AlertEventKind.YellowStarted: stored = s.SoundYellow; repeat = s.RepeatOther; break;
                 case AlertEventKind.YellowFromRed: stored = s.SoundYellowFromRed; repeat = s.RepeatOther; break;
                 case AlertEventKind.AllClear: stored = s.SoundClear; repeat = s.RepeatOther; break;
@@ -155,7 +155,7 @@ namespace Varta.Ui
             AppSettings s = Settings;
             var files = new List<string>();
             if (s.VoiceEnabled)
-                foreach (string st in new[] { s.SoundRed, s.SoundYellow, s.SoundYellowFromRed, s.SoundClear, s.SoundReminder })
+                foreach (string st in new[] { s.SoundRed, s.SoundYellow, s.SoundRedFromYellow, s.SoundYellowFromRed, s.SoundClear, s.SoundReminder })
                     if (!string.IsNullOrWhiteSpace(st)) files.Add(Paths.Resolve(st));
             Audio.Preload(files);
         }
@@ -393,6 +393,7 @@ namespace Varta.Ui
                 { "Червоний рівень", s.SoundRed }, { "Жовтий рівень", s.SoundYellow },
                 { "Зниження до жовтого", s.SoundYellowFromRed }, { "Відбій", s.SoundClear }
             };
+            if (!string.IsNullOrWhiteSpace(s.SoundRedFromYellow)) files["Підвищення до червоного"] = s.SoundRedFromYellow;
             foreach (var kv in files)
             {
                 string full = Paths.Resolve(kv.Value);
