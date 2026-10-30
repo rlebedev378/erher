@@ -73,6 +73,8 @@ namespace Varta
 
             List<string> warnings;
             bool existed;
+            string migrated = Paths.MigrateLegacyData();
+            int restoredSounds = SoundFiles.EnsureDefaults();
             AppSettings settings = SettingsStore.Load(out warnings, out existed);
 
             using (var app = new AppController(settings, warnings, existed))
@@ -97,7 +99,12 @@ namespace Varta
                     t.Start();
                 }
 
-                Autostart.RepairIfNeeded(Paths.ExePath);
+                if (migrated != null) Log.Info(migrated);
+                if (restoredSounds > 0) Log.Info("Відновлено стандартні звукові файли в папці sounds: " + restoredSounds + ".");
+                if (Autostart.RemoveDownloadMark(Paths.ExePath))
+                    Log.Info("З Varta.exe знято позначку «завантажено з Інтернету» — автозапуск не зупинятиметься на попередженні безпеки Windows.");
+                string repaired = Autostart.RepairIfNeeded(Paths.ExePath);
+                if (repaired != null) Log.Info(repaired);
                 app.Start();
 
                 string page = Value(args, "--page=");
@@ -109,10 +116,12 @@ namespace Varta
                     app.RaiseTest(k);
                 }
 
-                bool hidden = launchedByAutostart && settings.StartMinimized && !app.FirstRun;
+                bool temporary = Paths.IsTemporaryLocation;
+                bool hidden = launchedByAutostart && settings.StartMinimized && !app.FirstRun && !temporary;
                 if (!hidden)
                 {
                     main.Show();
+                    if (temporary) main.Shown += delegate { WarnTemporaryLocation(main); };
                     if (app.FirstRun) main.Shown += delegate { FirstRun(app, main); };
                 }
 
@@ -125,14 +134,33 @@ namespace Varta
             return 0;
         }
 
+        static void WarnTemporaryLocation(MainForm main)
+        {
+            Log.Warn("Програму запущено з тимчасової папки: " + Paths.AppDir);
+            MessageBox.Show(main,
+                "ВАРТУ запущено з архіву або тимчасової папки:\n" + Paths.AppDir + "\n\n" +
+                "Звідси налаштування, звуки й автозапуск не збережуться. Закрийте програму (значок у треї → «Вийти»), " +
+                "розпакуйте папку Varta з архіву, наприклад у C:\\Varta, і запустіть Varta.exe звідти.",
+                "ВАРТА — розпакуйте архів", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
         static void FirstRun(AppController app, MainForm main)
         {
             try
             {
-                DialogResult r = MessageBox.Show(main,
-                    "Ласкаво просимо до ВАРТИ!\n\nЗапускати програму автоматично разом із Windows? Це рекомендовано, щоб тривоги відстежувалися після кожного перезавантаження комп'ютера.",
-                    "ВАРТА — перший запуск", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (r == DialogResult.Yes) app.SetAutostart(true);
+                if (!Paths.IsTemporaryLocation)
+                {
+                    DialogResult r = MessageBox.Show(main,
+                        "Ласкаво просимо до ВАРТИ!\n\nЗапускати програму автоматично разом із Windows? Це рекомендовано, щоб тривоги відстежувалися після кожного перезавантаження комп'ютера.",
+                        "ВАРТА — перший запуск", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                    if (r == DialogResult.Yes)
+                    {
+                        string err = app.SetAutostart(true);
+                        if (err != null)
+                            MessageBox.Show(main, "Не вдалося увімкнути автозапуск: " + err + "\n\nСпробуйте ще раз у вкладці «Система».",
+                                "ВАРТА", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
 
                 AppSettings s = SettingsJson.Clone(app.Settings);
                 s.FirstRunDone = true;
