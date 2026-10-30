@@ -18,7 +18,6 @@ namespace Varta.Tests
         [InlineData("yellow_alert.mp3", 44100, 1, 10659, 0.0738)]
         [InlineData("downgrade_yellow.mp3", 44100, 1, 11810, 0.0767)]
         [InlineData("all_clear.mp3", 44100, 1, 15982, 0.0792)]
-        [InlineData("threat_nearby.mp3", 44100, 1, 7524, 0.0674)]
         public void Default_voice_files_decode_to_the_expected_length_and_loudness(string name, int rate, int ch, int ms, double rms)
         {
             DecodedAudio a = AudioDecoder.Decode(Default(name));

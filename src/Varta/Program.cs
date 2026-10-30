@@ -112,7 +112,9 @@ namespace Varta
                 string shot = Value(args, "--test-banner=");
                 if (shot != null)
                 {
-                    AlertEventKind k = shot == "yellow" ? AlertEventKind.YellowStarted : (shot == "green" ? AlertEventKind.AllClear : AlertEventKind.RedStarted);
+                    AlertEventKind k = shot == "yellow" ? AlertEventKind.YellowStarted
+                                     : shot == "green" ? AlertEventKind.AllClear
+                                     : shot == "nearby" ? AlertEventKind.ThreatNearby : AlertEventKind.RedStarted;
                     app.RaiseTest(k);
                 }
 

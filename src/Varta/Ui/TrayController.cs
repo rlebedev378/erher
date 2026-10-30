@@ -103,7 +103,7 @@ namespace Varta.Ui
         {
             try
             {
-                ToolTipIcon icon = n.IsTechnical ? ToolTipIcon.Warning
+                ToolTipIcon icon = n.IsTechnical || n.Kind == AlertEventKind.ThreatNearby ? ToolTipIcon.Warning
                                  : n.IsInfo ? ToolTipIcon.Info
                                  : (n.Level == AlertLevel.Red ? ToolTipIcon.Error : (n.Level == AlertLevel.Yellow ? ToolTipIcon.Warning : ToolTipIcon.Info));
                 _ni.ShowBalloonTip(10000, n.Title, string.IsNullOrEmpty(n.Body) ? n.Title : n.Body, icon);

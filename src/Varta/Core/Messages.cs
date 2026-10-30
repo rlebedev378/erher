@@ -15,8 +15,7 @@ namespace Varta.Core
         public bool IsTest;
         public bool IsTechnical;
         public bool IsInfo;
-        /// <summary>Короткочасне попередження: банер зникає сам навіть під час тривоги.</summary>
-        public bool Transient;
+        public string Link = "";
     }
 
     public static class Lang
@@ -75,7 +74,12 @@ namespace Varta.Core
                 case AlertEventKind.RedReminder:
                     Alert(n, AlertLevel.Red, "🔴", s.TextRedTitle + " (нагадування)", s.TextRedBody, s, e); break;
                 case AlertEventKind.ThreatNearby:
-                    Alert(n, AlertLevel.Red, "🎯", s.TextNearbyTitle, s.TextNearbyBody, s, e); n.Transient = true; break;
+                    // Особисте сповіщення, не рівень тривоги: свій значок і колір (див. BannerForm), банер не тримається до відбою.
+                    n.Emoji = "🎯";
+                    n.Title = Fill(s.TextNearbyTitle, s, e, n.LocalTime);
+                    n.Body = Fill(s.TextNearbyBody, s, e, n.LocalTime);
+                    n.Link = e.Link ?? "";
+                    break;
                 case AlertEventKind.ConnectionLost:
                     Tech(n, "⚠️", "Втрачено зв'язок із джерелом даних", e.Message); break;
                 case AlertEventKind.ConnectionRestored:
@@ -127,6 +131,7 @@ namespace Varta.Core
             if (n.IsTest) sb.Append("🧪 ");
             sb.Append(n.Emoji).Append(' ').Append(n.Title);
             if (!string.IsNullOrEmpty(n.Body)) sb.Append('\n').Append(n.Body);
+            if (!string.IsNullOrEmpty(n.Link)) sb.Append('\n').Append(n.Link);
             sb.Append("\n🕒 ").Append(n.LocalTime.ToString("dd.MM HH:mm:ss"));
             if (!string.IsNullOrEmpty(pcName)) sb.Append(" • ").Append(pcName);
             if (!string.IsNullOrEmpty(n.Source)) sb.Append(" • ").Append(n.Source);

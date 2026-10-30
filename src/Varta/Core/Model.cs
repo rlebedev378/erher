@@ -5,7 +5,7 @@ namespace Varta.Core
     public static class AppInfo
     {
         public const string Name = "ВАРТА";
-        public const string Version = "1.0.4";
+        public const string Version = "1.0.5";
         public const string Tagline = "Сповіщення про повітряну тривогу";
     }
 
@@ -65,6 +65,8 @@ namespace Varta.Core
         public string Detail = "";
         public string Source = "";
         public string Message = "";
+        /// <summary>Посилання на першоджерело (допис каналу) — додається в повідомлення адміністратору.</summary>
+        public string Link = "";
         public bool IsTest;
         public TimeSpan Downtime;
     }

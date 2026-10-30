@@ -16,6 +16,9 @@ namespace Varta.Tests
         /// <summary>Справжня сторінка t.me/s/tlknewsua (повідомлення 133298–133317, 30.10.2026).</summary>
         static string Page() { return File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "tlknewsua_sample.html")); }
 
+        /// <summary>Сповіщення йде адміністратору, тож без підключеного бота канали не читаються.</summary>
+        static AppSettings WithAdmin() { return new AppSettings { AdminEnabled = true, AdminBotToken = "1:test", AdminChatId = "42" }; }
+
         static DateTime Utc(string s) { return DateTime.Parse(s, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal); }
 
         /// <summary>Та сама сторінка, але ніби новіших за maxId повідомлень ще немає.</summary>
@@ -102,7 +105,7 @@ namespace Varta.Tests
             DateTime server = Utc("2026-10-30T07:00:30Z");
             string body = PageUpTo(133314);
             var http = new FakeHttp { OnGet = u => new HttpResult { Status = 200, Body = body, ServerDateUtc = server } };
-            var s = new AppSettings();
+            AppSettings s = WithAdmin();
             var w = new NearbyWatcher(() => s, http, () => server);
 
             Assert.Empty(w.Poll());
@@ -126,7 +129,8 @@ namespace Varta.Tests
             DateTime server = Utc("2026-10-30T07:00:30Z");
             string body = PageUpTo(133314);
             var http = new FakeHttp { OnGet = u => new HttpResult { Status = 200, Body = body, ServerDateUtc = server } };
-            var s = new AppSettings { NearbyRepeatMinutes = 0 };
+            AppSettings s = WithAdmin();
+            s.NearbyRepeatMinutes = 0;
             var w = new NearbyWatcher(() => s, http, () => server);
             w.Poll();
             body = Page();
@@ -144,7 +148,7 @@ namespace Varta.Tests
         public void Watcher_reports_unreachable_channel_and_stays_idle_when_disabled()
         {
             var http = new FakeHttp { OnGet = u => new HttpResult { Status = 0, Error = "dns", Body = "" } };
-            var s = new AppSettings();
+            AppSettings s = WithAdmin();
             var w = new NearbyWatcher(() => s, http, () => DateTime.UtcNow);
             Assert.Empty(w.Poll());
             NearbyChannelStatus st = w.GetStatus().Single();
@@ -170,22 +174,75 @@ namespace Varta.Tests
         }
 
         [Fact]
-        public void Nearby_event_is_a_voice_alert_with_own_texts_and_a_transient_banner()
+        public void Nearby_alert_is_a_personal_telegram_message_without_voice()
         {
-            Assert.True(RoutePolicy.VoiceCapable(AlertEventKind.ThreatNearby));
+            Assert.False(RoutePolicy.VoiceCapable(AlertEventKind.ThreatNearby));
             Assert.Contains(AlertEventKind.ThreatNearby, RoutePolicy.Order);
-            Assert.NotEqual(Channel.None, RoutePolicy.DefaultFor(AlertEventKind.ThreatNearby) & Channel.Voice);
-
+            Assert.Equal(Channel.Admin, RoutePolicy.DefaultFor(AlertEventKind.ThreatNearby));
             var s = new AppSettings();
-            Notice n = Messages.Compose(new EngineEvent { Kind = AlertEventKind.ThreatNearby, Detail = "«Далее Центр ⚠️» (@tlknewsua, 09:00)", Source = "@tlknewsua" },
-                s, DateTime.Now, "PC");
-            Assert.Equal("ЦІЛЬ ЛЕТИТЬ У НАШ БІК", n.Title);
-            Assert.Equal("«Далее Центр ⚠️» (@tlknewsua, 09:00). Негайно пройдіть в укриття!", n.Body);
-            Assert.Equal(AlertLevel.Red, n.Level);
-            Assert.True(n.Transient);
-            Assert.Equal("sounds\\threat_nearby.mp3", s.SoundNearby);
+            RoutePolicy.Set(s, AlertEventKind.ThreatNearby, Channel.Voice | Channel.Admin);
+            Assert.Equal(Channel.Admin, RoutePolicy.Get(s, AlertEventKind.ThreatNearby));   // голос не вмикається навіть вручну
+            Assert.True(RoutePolicy.AdminGetsTest(s, AlertEventKind.ThreatNearby));
+            Assert.False(RoutePolicy.AdminGetsTest(s, AlertEventKind.RedStarted));
+
+            var e = new EngineEvent
+            {
+                Kind = AlertEventKind.ThreatNearby, Detail = "Дале Центральный рынок/Центр ⚠️", Source = "@tlknewsua",
+                Link = "https://t.me/tlknewsua/133315"
+            };
+            Notice n = Messages.Compose(e, s, new DateTime(2026, 10, 30, 8, 59, 14), "PC");
+            Assert.Equal("Ціль летить у наш бік", n.Title);
+            Assert.Equal("Дале Центральный рынок/Центр ⚠️", n.Body);
+            Assert.Equal(AlertLevel.Unknown, n.Level);   // не рівень тривоги: банер (якщо ввімкнути) — фіолетовий і не висить до відбою
+            Assert.False(n.IsTechnical);
+            Assert.Equal("🎯 Ціль летить у наш бік\nДале Центральный рынок/Центр ⚠️\nhttps://t.me/tlknewsua/133315\n🕒 30.10 08:59:14 • PC • @tlknewsua",
+                Messages.AdminText(n, "PC"));
             Assert.True(s.NearbyEnabled);
             Assert.Equal("tlknewsua", s.NearbyChannels);
+        }
+
+        [Fact]
+        public void Channels_are_read_only_when_the_alert_can_reach_someone()
+        {
+            var s = new AppSettings();
+            Assert.False(NearbyWatcher.CanDeliver(s));   // за замовчуванням бота не підключено
+            var http = new FakeHttp { OnGet = u => new HttpResult { Status = 200, Body = Page() } };
+            var w = new NearbyWatcher(() => s, http, () => DateTime.UtcNow);
+            Assert.Empty(w.Poll());
+            Assert.Empty(http.Requests);
+            Assert.Empty(w.GetStatus());
+
+            s.AdminEnabled = true; s.AdminBotToken = "1:test"; s.AdminChatId = "42";
+            Assert.True(NearbyWatcher.CanDeliver(s));
+            Assert.Empty(w.Poll());                      // перше читання — лише запам'ятати, що вже є в каналі
+            Assert.Single(http.Requests);
+
+            RoutePolicy.Set(s, AlertEventKind.ThreatNearby, Channel.None);
+            Assert.False(NearbyWatcher.CanDeliver(s));
+            s.AdminEnabled = false;
+            RoutePolicy.Set(s, AlertEventKind.ThreatNearby, Channel.Tray);
+            Assert.True(NearbyWatcher.CanDeliver(s));    // лише вікно Windows на цьому ПК
+        }
+
+        [Fact]
+        public void Settings_from_1_0_4_make_the_nearby_alert_admin_only_once()
+        {
+            string json = "{\"SchemaVersion\":1,\"TextNearbyTitle\":\"ЦІЛЬ ЛЕТИТЬ У НАШ БІК\",\"TextNearbyBody\":\"{detail}. Негайно пройдіть в укриття!\"," +
+                          "\"SoundNearby\":\"sounds\\\\threat_nearby.mp3\",\"Routes\":{\"ThreatNearby\":\"voice,banner,tray,admin\",\"AllClear\":\"tray\"}}";
+            var w = new List<string>();
+            AppSettings s = SettingsJson.FromJson(json, w);
+            Assert.Empty(w);
+            Assert.Equal(2, s.SchemaVersion);
+            Assert.Equal(Channel.Admin, RoutePolicy.Get(s, AlertEventKind.ThreatNearby));
+            Assert.Equal(Channel.Tray, RoutePolicy.Get(s, AlertEventKind.AllClear));
+            Assert.Equal(AppSettings.DefaultNearbyTitle, s.TextNearbyTitle);
+            Assert.Equal(AppSettings.DefaultNearbyBody, s.TextNearbyBody);
+            Assert.DoesNotContain("SoundNearby", SettingsJson.ToJson(s));
+
+            // Те, що обрано вже в 1.0.5, не скидається.
+            AppSettings mine = SettingsJson.FromJson("{\"SchemaVersion\":2,\"Routes\":{\"ThreatNearby\":\"tray,admin\"}}", null);
+            Assert.Equal(Channel.Tray | Channel.Admin, RoutePolicy.Get(mine, AlertEventKind.ThreatNearby));
+            Assert.Equal(Channel.Tray | Channel.Admin, RoutePolicy.Get(SettingsJson.Clone(mine), AlertEventKind.ThreatNearby));
         }
 
         [Fact]

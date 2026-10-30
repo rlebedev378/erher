@@ -11,7 +11,7 @@ using Varta.Platform;
 
 namespace Varta.Ui
 {
-    public enum Glyph { Waves, Exclaim, Check, Question, Pause, Siren, None }
+    public enum Glyph { Waves, Exclaim, Check, Question, Pause, Siren, Target, None }
 
     /// <summary>
     /// Фірмовий стиль ВАРТА: глибокий темно-синій + «український» синій акцент, золотий штрих;
@@ -45,6 +45,8 @@ namespace Varta.Ui
         public static readonly Color Grey = C("#667085");
         public static readonly Color GreySoft = C("#E8ECF2");
         public static readonly Color Orange = C("#D9480F");
+        /// <summary>«Ціль летить у наш бік» — окремий колір, щоб не плутати з рівнями тривоги.</summary>
+        public static readonly Color Purple = C("#6D28D9");
 
         static readonly Dictionary<string, Font> Fonts = new Dictionary<string, Font>();
 
@@ -169,6 +171,17 @@ namespace Varta.Ui
                     case Glyph.Siren:
                         DrawSiren(g, r, ink, ink);
                         break;
+                    case Glyph.Target:
+                        {
+                            float cy = r.Y + h * 0.50f, rad = w * 0.2f;
+                            g.DrawEllipse(pen, cx - rad, cy - rad, rad * 2, rad * 2);
+                            g.DrawLine(pen, cx, cy - rad * 1.6f, cx, cy - rad * 0.55f);
+                            g.DrawLine(pen, cx, cy + rad * 0.55f, cx, cy + rad * 1.6f);
+                            g.DrawLine(pen, cx - rad * 1.6f, cy, cx - rad * 0.55f, cy);
+                            g.DrawLine(pen, cx + rad * 0.55f, cy, cx + rad * 1.6f, cy);
+                            g.FillEllipse(inkBrush, cx - w * 0.05f, cy - w * 0.05f, w * 0.1f, w * 0.1f);
+                            break;
+                        }
                 }
             }
             g.SmoothingMode = old;

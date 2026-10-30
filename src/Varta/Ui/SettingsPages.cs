@@ -64,7 +64,7 @@ namespace Varta.Ui
             t.Txt("Відбій — текст", s => s.TextClearBody, (s, v) => s.TextClearBody = v, null, false, 1);
             t.Txt("Ціль у наш бік — заголовок", s => s.TextNearbyTitle, (s, v) => s.TextNearbyTitle = v, null, false, 1);
             t.Txt("Ціль у наш бік — текст", s => s.TextNearbyBody, (s, v) => s.TextNearbyBody = v,
-                "{detail} — повідомлення каналу, наприклад «Дале Центральный рынок/Центр ⚠️» (@tlknewsua, 08:59).", false, 1);
+                "{detail} — допис каналу, наприклад «Дале Центральный рынок/Центр ⚠️». У Telegram окремим рядком додається посилання на допис.", false, 1);
             t.Finish();
 
             Bind(s => LoadGrid(grid, s), s => SaveGrid(grid, s));
@@ -171,8 +171,6 @@ namespace Varta.Ui
             f.SoundRow("Жовтий рівень", s => s.SoundYellow, (s, v) => s.SoundYellow = v, "sounds\\yellow_alert.mp3", null);
             f.SoundRow("Зниження: червоний → жовтий", s => s.SoundYellowFromRed, (s, v) => s.SoundYellowFromRed = v, "sounds\\downgrade_yellow.mp3", null);
             f.SoundRow("Відбій тривоги", s => s.SoundClear, (s, v) => s.SoundClear = v, "sounds\\all_clear.mp3", null);
-            f.SoundRow("Ціль летить у наш бік", s => s.SoundNearby, (s, v) => s.SoundNearby = v, "sounds\\threat_nearby.mp3",
-                "Окреме оповіщення з каналу про рух цілей (вкладка «Джерела даних»).");
             f.SoundRow("Нагадування під час тривоги", s => s.SoundReminder, (s, v) => s.SoundReminder = v, "", "Порожньо — використовується файл червоного рівня.", s => s.SoundRed, "файл червоного рівня");
             f.Finish();
 
@@ -254,30 +252,6 @@ namespace Varta.Ui
             tgRes = tg.Result();
             tg.Finish();
 
-            CardBuilder nb = NewCard("Ціль летить у наш бік — канали про рух цілей",
-                "Окреме оповіщення, коли канал на кшталт @tlknewsua пише, що ціль летить до вашого району (наприклад, «Дале Центральный рынок/Центр ⚠️»). " +
-                "Беруться лише нові короткі повідомлення; ті, що вже були в каналі на момент запуску програми, не оголошуються. Як саме сповіщати — вкладки «Сповіщення» і «Звук».");
-            nb.Check("Стежити за рухом цілей у наш бік", s => s.NearbyEnabled, (s, v) => s.NearbyEnabled = v, null);
-            TextBox nbCh = nb.Txt("Канали (по одному в рядку)", s => string.Join("\r\n", TextUtil.SplitChannels(s.NearbyChannels).ToArray()),
-                (s, v) => s.NearbyChannels = v, "Публічний канал з увімкненим веб-переглядом: @назва або t.me/назва.", false, 2);
-            TextBox nbKw = nb.Txt("Наш район (слова через «|»)", s => s.NearbyKeywords, (s, v) => s.NearbyKeywords = v,
-                "Регістр не важливий. «*» у кінці слова — будь-яке закінчення: «холодн* гор*» = Холодна гора, Холодную гору. " +
-                "Стандартно: Центральний ринок/Благбаз, Центр, ЮЖД/Південний вокзал, Холодна гора (ХГ), Москалівка, Левада.", false, 3);
-            nb.Num("Повторювати не частіше ніж раз на", 0, 30, s => s.NearbyRepeatMinutes, (s, v) => s.NearbyRepeatMinutes = v, "хвилин",
-                "Кілька повідомлень поспіль про ту саму ціль — одне оповіщення, решта лише в журнал. 0 — оповіщати про кожне.");
-            Button nbTest = UiKit.Btn("Перевірити на останніх повідомленнях", true);
-            Button nbDefault = UiKit.Btn("Стандартний список слів", false);
-            Label nbRes = null;
-            nbTest.Click += delegate
-            {
-                CardBuilder.ShowResult(nbRes, "Перевірка…");
-                C.TestNearby(nbCh.Text, nbKw.Text, r => CardBuilder.ShowResult(nbRes, r));
-            };
-            nbDefault.Click += delegate { nbKw.Text = AppSettings.DefaultNearbyKeywords; };
-            nb.Buttons(nbTest, nbDefault);
-            nbRes = nb.Result(104);
-            nb.Finish();
-
             CardBuilder rel = NewCard("Частота перевірки та надійність", null);
             rel.Num("Перевіряти кожні", 10, 300, s => s.PollIntervalSeconds, (s, v) => s.PollIntervalSeconds = v, "секунд",
                 "Ліміт alerts.in.ua — 8–12 запитів на хвилину з однієї IP-адреси; не ставте частіше 10 с. Якщо ВАРТА працює на кількох ПК в одній мережі, ставте 30 с або більше.");
@@ -320,6 +294,38 @@ namespace Varta.Ui
             b.Buttons(show, test);
             res = b.Result();
             b.Finish();
+
+            CardBuilder nb = NewCard("Ціль летить у наш бік — особисте сповіщення",
+                "Коли канал про рух цілей (наприклад, @tlknewsua) пише, що ціль летить до вашого району — «Дале Центральный рынок/Центр ⚠️», — " +
+                "ВАРТА надсилає вам окреме повідомлення 🎯 у Telegram із посиланням на допис. Без голосу й без банера тривоги: в офісі його не чути й не видно. " +
+                "За бажанням його можна ще й показувати на екрані — у вкладці «Сповіщення» (окремий фіолетовий банер або вікно Windows).");
+            nb.Check("Стежити за рухом цілей у наш бік", s => s.NearbyEnabled, (s, v) => s.NearbyEnabled = v,
+                "Зніміть галочку, щоб повністю вимкнути це сповіщення (канали тоді не читаються). Потрібен підключений бот — картка вище.");
+            TextBox nbCh = nb.Txt("Канали (по одному в рядку)", s => string.Join("\r\n", TextUtil.SplitChannels(s.NearbyChannels).ToArray()),
+                (s, v) => s.NearbyChannels = v, "Публічний канал з увімкненим веб-переглядом: @назва або t.me/назва.", false, 2);
+            TextBox nbKw = nb.Txt("Наш район (слова через «|»)", s => s.NearbyKeywords, (s, v) => s.NearbyKeywords = v,
+                "Регістр не важливий. «*» у кінці слова — будь-яке закінчення: «холодн* гор*» = Холодна гора, Холодную гору. " +
+                "Стандартно: Центральний ринок/Благбаз, Центр, ЮЖД/Південний вокзал, Холодна гора (ХГ), Москалівка, Левада.", false, 3);
+            nb.Num("Надсилати не частіше ніж раз на", 0, 30, s => s.NearbyRepeatMinutes, (s, v) => s.NearbyRepeatMinutes = v, "хвилин",
+                "Кілька дописів поспіль про ту саму ціль — одне повідомлення, решта лише в журнал. 0 — про кожен допис.");
+            Button nbTest = UiKit.Btn("Перевірити на останніх дописах", false);
+            Button nbSend = UiKit.Btn("Надіслати приклад у Telegram", true);
+            Button nbDefault = UiKit.Btn("Стандартний список слів", false);
+            Label nbRes = null;
+            nbTest.Click += delegate
+            {
+                CardBuilder.ShowResult(nbRes, "Перевірка…");
+                C.TestNearby(nbCh.Text, nbKw.Text, r => CardBuilder.ShowResult(nbRes, r));
+            };
+            nbSend.Click += delegate
+            {
+                CardBuilder.ShowResult(nbRes, "Надсилання…");
+                C.TestNearbyAdmin(tok.Text, chat.Text, r => CardBuilder.ShowResult(nbRes, r));
+            };
+            nbDefault.Click += delegate { nbKw.Text = AppSettings.DefaultNearbyKeywords; };
+            nb.Buttons(nbTest, nbSend, nbDefault);
+            nbRes = nb.Result(104);
+            nb.Finish();
 
             CardBuilder r2 = NewCard("Звіти", null);
             r2.Check("Щодня надсилати звіт «усе працює»", s => s.AdminDailyReport, (s, v) => s.AdminDailyReport = v,

@@ -179,9 +179,13 @@ namespace Varta.Platform
             foreach (NearbyMatch h in hits)
             {
                 string what = "«" + h.Headline + "» (@" + h.Channel + ", " + h.TimeUtc.ToLocalTime().ToString("HH:mm") + ")";
-                if (!h.Announce) { Log.Info("Ще одне повідомлення про ціль у наш бік (повторно не оголошуємо): " + what); continue; }
+                if (!h.Announce) { Log.Info("Ще одне повідомлення про ціль у наш бік (повторно не надсилаємо): " + what); continue; }
                 Log.Info("Подія: ThreatNearby — " + what + ", слово «" + h.Keyword + "»");
-                Raise(new EngineEvent { Kind = AlertEventKind.ThreatNearby, AtUtc = DateTime.UtcNow, Detail = what, Source = "@" + h.Channel, Message = h.Text });
+                Raise(new EngineEvent
+                {
+                    Kind = AlertEventKind.ThreatNearby, AtUtc = h.TimeUtc, Detail = h.Headline, Source = "@" + h.Channel,
+                    Message = h.Text, Link = "https://t.me/" + h.Channel + "/" + h.Id
+                });
             }
         }
 

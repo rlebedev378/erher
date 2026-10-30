@@ -25,7 +25,6 @@ namespace Varta.Core
                 case AlertEventKind.YellowFromRed:
                 case AlertEventKind.AllClear:
                 case AlertEventKind.RedReminder:
-                case AlertEventKind.ThreatNearby:
                     return true;
                 default:
                     return false;
@@ -42,8 +41,8 @@ namespace Varta.Core
                 case AlertEventKind.YellowStarted:
                 case AlertEventKind.YellowFromRed:
                 case AlertEventKind.AllClear:
-                case AlertEventKind.ThreatNearby:
                     return all;
+                case AlertEventKind.ThreatNearby: return Channel.Admin;   // особисте: лише Telegram адміністратору
                 case AlertEventKind.RedReminder: return Channel.Voice | Channel.Tray;
                 case AlertEventKind.ConnectionLost:
                 case AlertEventKind.ConnectionRestored:
@@ -71,6 +70,12 @@ namespace Varta.Core
             string t;
             if (s.Routes != null && s.Routes.TryGetValue(k.ToString(), out t)) return FromText(t);
             return DefaultFor(k);
+        }
+
+        /// <summary>Чи надсилати адміністратору тест. «Ціль у наш бік» іде насамперед адміністратору, тож його тест — завжди.</summary>
+        public static bool AdminGetsTest(AppSettings s, AlertEventKind k)
+        {
+            return s.TestsGoToAdmin || k == AlertEventKind.ThreatNearby;
         }
 
         public static void Set(AppSettings s, AlertEventKind k, Channel c)

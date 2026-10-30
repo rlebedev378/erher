@@ -143,23 +143,28 @@ namespace Varta.Platform
                 }
             }
 
-            // 4б. Ціль летить у наш бік (канали про рух цілей)
+            // 4б. Ціль летить у наш бік — особисте сповіщення (за замовчуванням лише адміністратору в Telegram)
             if (!s.NearbyEnabled)
-                list.Add(Item("nearby", "Ціль у наш бік", HealthState.Info, "Стеження за рухом цілей вимкнено.", "goto-sources", "Налаштувати"));
+                list.Add(Item("nearby", "Ціль у наш бік", HealthState.Info, "Вимкнено.", "goto-admin", "Налаштувати"));
+            else if (!NearbyWatcher.CanDeliver(s))
+                list.Add(Item("nearby", "Ціль у наш бік", HealthState.Info,
+                    "Не працює: сповіщення надсилається адміністратору в Telegram, а бота не підключено. Показ на екрані можна ввімкнути у вкладці «Сповіщення».",
+                    "goto-admin", "Налаштувати"));
             else
             {
                 List<NearbyChannelStatus> ns = m.Nearby.GetStatus();
                 NearbyMatch lm = m.Nearby.LastMatch;
                 string last = lm == null ? "" : " Останній збіг: " + lm.TimeUtc.ToLocalTime().ToString("HH:mm") + " «" + lm.Headline + "».";
+                string to = " Куди: " + NearbyDelivery(s) + ".";
                 if (ns.Count == 0)
-                    list.Add(Item("nearby", "Ціль у наш бік", HealthState.Info, "Ще не перевірялось."));
+                    list.Add(Item("nearby", "Ціль у наш бік", HealthState.Info, "Ще не перевірялось." + to));
                 else if (ns.Exists(x => !x.Ok))
                     list.Add(Item("nearby", "Ціль у наш бік", HealthState.Warn,
-                        string.Join("; ", ns.Where(x => !x.Ok).Select(x => "@" + x.Channel + ": " + x.Error).ToArray()) + "." + last, "goto-sources", "Налаштувати"));
+                        string.Join("; ", ns.Where(x => !x.Ok).Select(x => "@" + x.Channel + ": " + x.Error).ToArray()) + "." + last, "goto-admin", "Налаштувати"));
                 else
                     list.Add(Item("nearby", "Ціль у наш бік", HealthState.Ok,
                         "Стежимо за " + string.Join(", ", ns.Select(x => "@" + x.Channel).ToArray()) +
-                        " (останній допис " + Ago(ns.Max(x => x.NewestMessageUtc ?? DateTime.UtcNow)) + ")." + last));
+                        " (останній допис " + Ago(ns.Max(x => x.NewestMessageUtc ?? DateTime.UtcNow)) + ")." + to + last));
             }
 
             // 5. Годинник
@@ -249,7 +254,6 @@ namespace Varta.Platform
             AddFile(s, AlertEventKind.YellowStarted, "Жовтий", s.SoundYellow, used, missing);
             AddFile(s, AlertEventKind.YellowFromRed, "Зниження", s.SoundYellowFromRed, used, missing);
             AddFile(s, AlertEventKind.AllClear, "Відбій", s.SoundClear, used, missing);
-            if (s.NearbyEnabled) AddFile(s, AlertEventKind.ThreatNearby, "Ціль у наш бік", s.SoundNearby, used, missing);
             if (missing.Count > 0)
                 res.Add(Item("audio-files", "Файли оголошень", HealthState.Error,
                     "Не знайдено: " + string.Join(", ", missing.ToArray()) + ". Замість голосу прозвучить резервний сигнал.", "goto-sound", "Вказати файли"));
@@ -273,6 +277,17 @@ namespace Varta.Platform
                     res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Ok, vol));
             }
             return res;
+        }
+
+        /// <summary>«адміністратору в Telegram, вікно Windows» — куди фактично піде «ціль у наш бік».</summary>
+        public static string NearbyDelivery(AppSettings s)
+        {
+            Channel c = RoutePolicy.Get(s, AlertEventKind.ThreatNearby);
+            var parts = new List<string>();
+            if ((c & Channel.Admin) != 0 && s.AdminConfigured) parts.Add("адміністратору в Telegram");
+            if ((c & Channel.Tray) != 0) parts.Add("вікно Windows");
+            if ((c & Channel.Banner) != 0) parts.Add("фіолетовий банер");
+            return parts.Count == 0 ? "нікуди" : string.Join(", ", parts.ToArray());
         }
 
         /// <summary>По два файли на рядок — щоб довгі назви не обрізались.</summary>

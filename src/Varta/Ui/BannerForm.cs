@@ -27,7 +27,8 @@ namespace Varta.Ui
             _n = n;
             using (Graphics g = CreateGraphics()) _k = Math.Max(1f, g.DpiX / 96f);
 
-            if (n.IsTechnical) { _bg = Theme.Orange; _ink = Color.White; }
+            if (n.Kind == AlertEventKind.ThreatNearby) { _bg = Theme.Purple; _ink = Color.White; }
+            else if (n.IsTechnical) { _bg = Theme.Orange; _ink = Color.White; }
             else if (n.IsInfo) { _bg = Theme.Navy3; _ink = Color.White; }
             else
             {
@@ -95,7 +96,8 @@ namespace Varta.Ui
 
             int shield = (int)(Height * 0.62f);
             Color shieldFill = _ink == Color.White ? Color.White : Theme.YellowInk;
-            Glyph glyph = _n.IsTechnical || _n.IsInfo ? Glyph.Exclaim : BrandArt.GlyphFor(_n.Level, false);
+            Glyph glyph = _n.Kind == AlertEventKind.ThreatNearby ? Glyph.Target
+                        : _n.IsTechnical || _n.IsInfo ? Glyph.Exclaim : BrandArt.GlyphFor(_n.Level, false);
             BrandArt.DrawShield(g, new RectangleF(32 * _k, (Height - shield) / 2f - 4 * _k, shield * 0.88f, shield), shieldFill, glyph, _bg, false);
 
             int x = (int)(32 * _k + shield * 0.88f + 32 * _k);
@@ -133,7 +135,7 @@ namespace Varta.Ui
 
         public void Show(Notice n, AppSettings s)
         {
-            bool sticky = s.BannerStayUntilClear && !n.IsTechnical && !n.IsInfo && !n.Transient && (n.Level == AlertLevel.Red || n.Level == AlertLevel.Yellow);
+            bool sticky = s.BannerStayUntilClear && !n.IsTechnical && !n.IsInfo && (n.Level == AlertLevel.Red || n.Level == AlertLevel.Yellow);
             if (sticky) { _sticky = n; _stickySettings = s; }
             ShowForms(n, s);
             _timer.Stop();

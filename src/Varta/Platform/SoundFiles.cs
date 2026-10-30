@@ -18,7 +18,7 @@ namespace Varta.Platform
     public static class SoundFiles
     {
         /// <summary>Стандартні файли (вбудовані у Varta.exe як ресурси «Varta.DefaultSounds.&lt;назва&gt;»).</summary>
-        public static readonly string[] DefaultNames = { "red_alert.mp3", "yellow_alert.mp3", "downgrade_yellow.mp3", "all_clear.mp3", "threat_nearby.mp3" };
+        public static readonly string[] DefaultNames = { "red_alert.mp3", "yellow_alert.mp3", "downgrade_yellow.mp3", "all_clear.mp3" };
 
         /// <summary>Повертає в папку sounds стандартні файли, яких там немає. Наявні файли (зокрема власні записи з тими самими назвами) не чіпає.</summary>
         public static int EnsureDefaults()

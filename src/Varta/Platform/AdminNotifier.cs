@@ -30,7 +30,7 @@ namespace Varta.Platform
 
         public bool IsConfigured(AppSettings s)
         {
-            return s.AdminEnabled && !string.IsNullOrWhiteSpace(s.AdminBotToken) && !string.IsNullOrWhiteSpace(s.AdminChatId);
+            return s.AdminConfigured;
         }
 
         public void Send(string text)

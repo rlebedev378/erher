@@ -94,7 +94,7 @@ namespace Varta.Ui
             Channel route = RoutePolicy.Get(s, e.Kind);
 
             string line = (n.IsTest ? "[ТЕСТ] " : "") + n.Title + (string.IsNullOrEmpty(n.Body) ? "" : " — " + n.Body);
-            if (n.IsTechnical) Log.Warn(line);
+            if (n.IsTechnical || e.Kind == AlertEventKind.ThreatNearby) Log.Warn(line);
             else if (n.Level == AlertLevel.Red || n.Level == AlertLevel.Yellow) Log.Alert(line);
             else Log.Info(line);
 
@@ -110,9 +110,14 @@ namespace Varta.Ui
                 if ((route & Channel.Banner) != 0) Banners.Show(n, s);
                 if ((route & Channel.Tray) != 0 && Tray != null) Tray.Balloon(n);
                 if ((route & Channel.Voice) != 0) PlayVoice(e.Kind, s, e.IsTest);
-                if ((route & Channel.Admin) != 0 && (!e.IsTest || s.TestsGoToAdmin)) Admin.Send(Messages.AdminText(n, PcName()));
+                if ((route & Channel.Admin) != 0 && (!e.IsTest || RoutePolicy.AdminGetsTest(s, e.Kind))) Admin.Send(Messages.AdminText(n, PcName()));
             }
             catch (Exception ex) { Log.Error("Збій під час показу сповіщення", ex); }
+
+            if (e.IsTest && e.Kind == AlertEventKind.ThreatNearby && !NearbyWatcher.CanDeliver(s) && ShowTestFailureDialog)
+                MessageBox.Show("Тест «Ціль летить у наш бік» нікуди не надіслано: це сповіщення йде адміністратору в Telegram, а бота не підключено.\n\n" +
+                                "Підключіть бота у вкладці «Адміністратор» або ввімкніть показ на екрані у вкладці «Сповіщення» (банер чи вікно Windows).",
+                    "ВАРТА", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             var h = StateChanged;
             if (h != null) h();
@@ -135,7 +140,6 @@ namespace Varta.Ui
                 case AlertEventKind.YellowFromRed: stored = s.SoundYellowFromRed; repeat = s.RepeatOther; break;
                 case AlertEventKind.AllClear: stored = s.SoundClear; repeat = s.RepeatOther; break;
                 case AlertEventKind.RedReminder: stored = string.IsNullOrWhiteSpace(s.SoundReminder) ? s.SoundRed : s.SoundReminder; repeat = 1; break;
-                case AlertEventKind.ThreatNearby: stored = s.SoundNearby; repeat = s.RepeatRed; break;
                 default: return;
             }
             string file = Paths.Resolve(stored);
@@ -151,7 +155,7 @@ namespace Varta.Ui
             AppSettings s = Settings;
             var files = new List<string>();
             if (s.VoiceEnabled)
-                foreach (string st in new[] { s.SoundRed, s.SoundYellow, s.SoundYellowFromRed, s.SoundClear, s.SoundReminder, s.NearbyEnabled ? s.SoundNearby : "" })
+                foreach (string st in new[] { s.SoundRed, s.SoundYellow, s.SoundYellowFromRed, s.SoundClear, s.SoundReminder })
                     if (!string.IsNullOrWhiteSpace(st)) files.Add(Paths.Resolve(st));
             Audio.Preload(files);
         }
@@ -339,6 +343,21 @@ namespace Varta.Ui
             Background(delegate { return NearbyWatcher.Preview(Http, channels, keywords, DateTime.UtcNow); }, done);
         }
 
+        /// <summary>Надсилає приклад «ціль у наш бік» у вказаний чат — щоб побачити, як воно виглядає в Telegram.</summary>
+        public void TestNearbyAdmin(string token, string chatId, Action<string> done)
+        {
+            Background(delegate
+            {
+                var e = new EngineEvent
+                {
+                    Kind = AlertEventKind.ThreatNearby, AtUtc = DateTime.UtcNow, IsTest = true, Source = "@tlknewsua",
+                    Detail = "Дале Центральный рынок/Центр ⚠️", Link = "https://t.me/tlknewsua/133315"
+                };
+                string err = Admin.SendNow(token, chatId, Messages.AdminText(Messages.Compose(e, Settings, DateTime.Now, PcName()), PcName()));
+                return err == null ? "✓ Приклад надіслано — перевірте Telegram." : "✗ " + err;
+            }, done);
+        }
+
         public void TestAdmin(string token, string chatId, Action<string> done)
         {
             Background(delegate
@@ -374,7 +393,6 @@ namespace Varta.Ui
                 { "Червоний рівень", s.SoundRed }, { "Жовтий рівень", s.SoundYellow },
                 { "Зниження до жовтого", s.SoundYellowFromRed }, { "Відбій", s.SoundClear }
             };
-            if (s.NearbyEnabled) files["Ціль у наш бік"] = s.SoundNearby;
             foreach (var kv in files)
             {
                 string full = Paths.Resolve(kv.Value);
@@ -412,7 +430,7 @@ namespace Varta.Ui
                 sb.AppendLine("  • Telegram → рівень: " + (r.Ok ? Lang.LevelShort(r.Level) : "н/д (" + r.Error + ")"));
             }
             sb.AppendLine("  • Ціль у наш бік: " + (s.NearbyEnabled
-                ? NearbyWatcher.Preview(Http, s.NearbyChannels, s.NearbyKeywords, DateTime.UtcNow).Replace("\n", "\n    ")
+                ? "куди — " + HealthService.NearbyDelivery(s) + "; " + NearbyWatcher.Preview(Http, s.NearbyChannels, s.NearbyKeywords, DateTime.UtcNow).Replace("\n", "\n    ")
                 : "вимкнено"));
             sb.AppendLine();
             sb.AppendLine("АДМІНІСТРАТОР: " + (s.AdminEnabled ? (Admin.IsConfigured(s) ? "налаштовано" : "увімкнено, але не заповнено") : "вимкнено"));

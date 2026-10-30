@@ -6,7 +6,7 @@ namespace Varta.Core
     /// <summary>Усі налаштування програми. Зберігаються в settings.json поруч із Varta.exe.</summary>
     public sealed class AppSettings
     {
-        public int SchemaVersion = 1;
+        public int SchemaVersion = 2;
         public bool FirstRunDone = false;
 
         // ---- Загальне ----
@@ -52,7 +52,6 @@ namespace Varta.Core
         public string SoundYellowFromRed = "sounds\\downgrade_yellow.mp3";
         public string SoundClear = "sounds\\all_clear.mp3";
         public string SoundReminder = "";
-        public string SoundNearby = "sounds\\threat_nearby.mp3";
         /// <summary>Гучність оголошення у % від поточної гучності Windows. Саму гучність Windows програма не змінює.</summary>
         public int AnnounceVolumePercent = 100;
         public int RepeatRed = 2;
@@ -86,8 +85,12 @@ namespace Varta.Core
         public string TextYellowFromRedBody = "Загроза зберігається. Залишайтеся уважними, будьте готові пройти в укриття.";
         public string TextClearTitle = "ВІДБІЙ ТРИВОГИ";
         public string TextClearBody = "Небезпеку знято. Дякуємо за організованість.";
-        public string TextNearbyTitle = "ЦІЛЬ ЛЕТИТЬ У НАШ БІК";
-        public string TextNearbyBody = "{detail}. Негайно пройдіть в укриття!";
+        public string TextNearbyTitle = DefaultNearbyTitle;
+        public string TextNearbyBody = DefaultNearbyBody;
+
+        public const string DefaultNearbyTitle = "Ціль летить у наш бік";
+        /// <summary>{detail} — текст допису каналу; посилання на допис у Telegram додається окремим рядком.</summary>
+        public const string DefaultNearbyBody = "{detail}";
 
         // ---- Адміністратор (Telegram-бот) ----
         public bool AdminEnabled = false;
@@ -107,6 +110,12 @@ namespace Varta.Core
         public Dictionary<string, string> Routes = RoutePolicy.Defaults();
 
         public static int Clamp(int v, int min, int max) { return v < min ? min : (v > max ? max : v); }
+
+        /// <summary>Telegram-адміністратор увімкнений і заповнений (властивість — у settings.json не зберігається).</summary>
+        public bool AdminConfigured
+        {
+            get { return AdminEnabled && !string.IsNullOrWhiteSpace(AdminBotToken) && !string.IsNullOrWhiteSpace(AdminChatId); }
+        }
 
         /// <summary>Ключ, вставлений разом із лапками чи префіксом «Bearer », інакше сервер відповідає 401.</summary>
         public static string CleanToken(string t)
@@ -147,6 +156,14 @@ namespace Varta.Core
             if (!Schedule.IsTime(AdminDailyReportTime)) AdminDailyReportTime = "09:00";
 
             if (Routes == null) Routes = new Dictionary<string, string>();
+            // Схема 2 (1.0.5): «ціль у наш бік» стало особистим сповіщенням адміністратору без голосу; у 1.0.4 воно йшло всіма способами.
+            if (SchemaVersion < 2)
+            {
+                Routes[AlertEventKind.ThreatNearby.ToString()] = RoutePolicy.ToText(RoutePolicy.DefaultFor(AlertEventKind.ThreatNearby));
+                if (TextNearbyTitle == "ЦІЛЬ ЛЕТИТЬ У НАШ БІК") TextNearbyTitle = DefaultNearbyTitle;
+                if (TextNearbyBody == "{detail}. Негайно пройдіть в укриття!") TextNearbyBody = DefaultNearbyBody;
+                SchemaVersion = 2;
+            }
             foreach (AlertEventKind k in RoutePolicy.Order)
             {
                 string key = k.ToString();

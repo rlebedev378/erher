@@ -221,7 +221,6 @@ namespace Varta.Ui
                     { AlertEventKind.RedStarted, s.SoundRed }, { AlertEventKind.YellowStarted, s.SoundYellow },
                     { AlertEventKind.YellowFromRed, s.SoundYellowFromRed }, { AlertEventKind.AllClear, s.SoundClear }
                 };
-                if (s.NearbyEnabled) checks[AlertEventKind.ThreatNearby] = s.SoundNearby;
                 foreach (var kv in checks)
                     if ((RoutePolicy.Get(s, kv.Key) & Channel.Voice) != 0 && !System.IO.File.Exists(Paths.Resolve(kv.Value)))
                         w.Add("Не знайдено файл голосу для події «" + RoutePolicy.Title(kv.Key) + "»: " + (string.IsNullOrWhiteSpace(kv.Value) ? "(не вказано)" : kv.Value));

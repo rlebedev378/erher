@@ -59,7 +59,8 @@ namespace Varta.Core
 
     /// <summary>
     /// Стежить за публічними Telegram-каналами про рух цілей (наприклад, @tlknewsua): нове коротке повідомлення зі згадкою
-    /// нашого району — окреме оповіщення «Ціль летить у наш бік». Те, що вже було в каналі на момент запуску, не оголошується.
+    /// нашого району — особисте сповіщення «Ціль летить у наш бік» (за замовчуванням лише адміністратору в Telegram).
+    /// Те, що вже було в каналі на момент запуску, не надсилається.
     /// </summary>
     public sealed class NearbyWatcher
     {
@@ -95,13 +96,26 @@ namespace Varta.Core
             lock (_lock) { return new List<NearbyChannelStatus>(_status); }
         }
 
+        /// <summary>Чи є куди надіслати: банер чи вікно Windows або підключений Telegram-адміністратор. Інакше канали не читаються.</summary>
+        public static bool CanDeliver(AppSettings s)
+        {
+            Channel c = RoutePolicy.Get(s, AlertEventKind.ThreatNearby);
+            if ((c & (Channel.Banner | Channel.Tray)) != 0) return true;
+            return (c & Channel.Admin) != 0 && s.AdminConfigured;
+        }
+
         /// <summary>Читає канали й повертає нові збіги (з позначкою, чи оголошувати). Викликається з потоку опитування.</summary>
         public List<NearbyMatch> Poll()
         {
             var found = new List<NearbyMatch>();
             var statuses = new List<NearbyChannelStatus>();
             AppSettings s = _cfg();
-            if (s.NearbyEnabled)
+            if (!s.NearbyEnabled || !CanDeliver(s))
+            {
+                // Після повторного ввімкнення перше читання знову лише запам'ятовує, що вже є в каналі.
+                _lastSeen.Clear();
+            }
+            else
             {
                 foreach (string ch in TextUtil.SplitChannels(s.NearbyChannels))
                 {
