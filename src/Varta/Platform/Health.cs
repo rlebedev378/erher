@@ -85,7 +85,10 @@ namespace Varta.Platform
                         "Немає зв'язку з джерелами: " + st.LastError + ". Стан тривоги НЕВІДОМИЙ.", "refresh", "Перевірити зараз"));
                 else if (st.ConsecutiveFailures > 0)
                     list.Add(Item("data", "Дані про тривоги", HealthState.Warn,
-                        "Остання спроба невдала: " + st.LastError + " (" + st.ConsecutiveFailures + " з " + s.FailuresBeforeLost + ").", "refresh", "Перевірити зараз"));
+                        st.LastOkUtc.HasValue
+                            ? "Остання спроба невдала: " + st.LastError + " (" + st.ConsecutiveFailures + " з " + s.FailuresBeforeLost + ")."
+                            : "Очікування зв'язку після запуску (невдалих спроб: " + st.ConsecutiveFailures + "): " + st.LastError + ".",
+                        "refresh", "Перевірити зараз"));
                 else if (!st.LastOkUtc.HasValue)
                     list.Add(Item("data", "Дані про тривоги", HealthState.Info, "Очікування першої відповіді від джерела…"));
                 else if (m.Engine.IsStale())

@@ -167,12 +167,44 @@ namespace Varta.Tests
         }
 
         [Fact]
-        public void Starting_during_alarm_announces_it_as_initial()
+        public void Starting_during_alarm_is_silent_and_only_later_changes_are_announced()
         {
             var c = new Clock(); var e = Make(c);
-            List<EngineEvent> ev = e.OnReading(Ok(AlertLevel.Red, "тривога"));
-            Assert.Equal(new[] { AlertEventKind.RedStarted }, Kinds(ev));
-            Assert.True(ev[0].IsInitial);
+            Assert.Empty(e.OnReading(Ok(AlertLevel.Red, "тривога")));
+            Assert.Equal(AlertLevel.Red, e.EffectiveLevel());
+            Assert.Empty(e.OnReading(Ok(AlertLevel.Red)));
+            Assert.Empty(e.OnReading(Ok(AlertLevel.Clear)));
+            Assert.Equal(new[] { AlertEventKind.AllClear }, Kinds(e.OnReading(Ok(AlertLevel.Clear))));
+        }
+
+        [Fact]
+        public void Starting_during_yellow_is_silent_and_escalation_is_announced()
+        {
+            var c = new Clock(); var e = Make(c);
+            Assert.Empty(e.OnReading(Ok(AlertLevel.Yellow)));
+            Assert.Equal(new[] { AlertEventKind.RedFromYellow }, Kinds(e.OnReading(Ok(AlertLevel.Red))));
+        }
+
+        [Fact]
+        public void Network_still_connecting_after_start_is_not_reported_as_lost()
+        {
+            var c = new Clock(); var e = Make(c);
+            for (int i = 0; i < 6; i++) { Assert.Empty(e.OnReading(Fail())); c.Advance(0.25); }
+            Assert.False(e.State.ConnectionLost);
+            Assert.Empty(e.OnReading(Ok(AlertLevel.Red)));
+            Assert.Equal(AlertLevel.Red, e.State.Level);
+        }
+
+        [Fact]
+        public void Long_outage_after_start_is_reported_and_then_the_known_state_is_announced()
+        {
+            var c = new Clock(); var e = Make(c);
+            DateTime start = c.Now, lostAt = start;
+            List<EngineEvent> lost = new List<EngineEvent>();
+            for (int i = 0; i < 20 && lost.Count == 0; i++) { lostAt = c.Now; lost = e.OnReading(Fail()); c.Advance(0.25); }
+            Assert.Equal(new[] { AlertEventKind.ConnectionLost }, Kinds(lost));
+            Assert.True(lostAt - start >= AlertEngine.StartupGrace);
+            Assert.Equal(new[] { AlertEventKind.ConnectionRestored, AlertEventKind.RedStarted }, Kinds(e.OnReading(Ok(AlertLevel.Red))));
         }
 
         [Fact]

@@ -80,8 +80,6 @@ namespace Varta.Core
                     Tech(n, "🔇", "Проблема зі звуком", e.Message); break;
                 case AlertEventKind.ConfigProblem:
                     Tech(n, "⚙️", "Проблема з налаштуваннями", e.Message); break;
-                case AlertEventKind.AppStarted:
-                    Tech(n, "ℹ️", "ВАРТУ запущено", e.Message); n.IsTechnical = false; n.IsInfo = true; break;
                 case AlertEventKind.MonitoringPaused:
                     Tech(n, "⏸", "Моніторинг призупинено", e.Message); break;
                 case AlertEventKind.MonitoringResumed:
@@ -89,8 +87,6 @@ namespace Varta.Core
                 case AlertEventKind.DailyReport:
                     Tech(n, "📋", "Щоденний звіт: усе працює", e.Message); n.IsTechnical = false; n.IsInfo = true; break;
             }
-            if (e.IsInitial && n.Level != AlertLevel.Unknown && n.Level != AlertLevel.Clear)
-                n.Body += " (стан на момент запуску програми)";
             if (e.IsTest) n.Title = "ТЕСТ: " + n.Title;
             return n;
         }

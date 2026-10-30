@@ -11,7 +11,7 @@ namespace Varta.Core
             AlertEventKind.RedStarted, AlertEventKind.RedFromYellow, AlertEventKind.YellowStarted,
             AlertEventKind.YellowFromRed, AlertEventKind.AllClear, AlertEventKind.RedReminder,
             AlertEventKind.ConnectionLost, AlertEventKind.ConnectionRestored, AlertEventKind.AudioProblem,
-            AlertEventKind.ConfigProblem, AlertEventKind.AppStarted, AlertEventKind.MonitoringPaused,
+            AlertEventKind.ConfigProblem, AlertEventKind.MonitoringPaused,
             AlertEventKind.MonitoringResumed, AlertEventKind.DailyReport
         };
 
@@ -50,7 +50,6 @@ namespace Varta.Core
                 case AlertEventKind.MonitoringPaused:
                 case AlertEventKind.MonitoringResumed:
                     return Channel.Tray | Channel.Admin;
-                case AlertEventKind.AppStarted:
                 case AlertEventKind.DailyReport:
                     return Channel.Admin;
                 default:
@@ -119,7 +118,6 @@ namespace Varta.Core
                 case AlertEventKind.ConnectionRestored: return "Зв'язок із джерелом відновлено";
                 case AlertEventKind.AudioProblem: return "Проблема зі звуком або файлами";
                 case AlertEventKind.ConfigProblem: return "Проблема з налаштуваннями";
-                case AlertEventKind.AppStarted: return "Програму запущено";
                 case AlertEventKind.MonitoringPaused: return "Моніторинг призупинено";
                 case AlertEventKind.MonitoringResumed: return "Моніторинг відновлено";
                 case AlertEventKind.DailyReport: return "Щоденний звіт «усе працює»";

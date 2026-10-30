@@ -71,13 +71,13 @@ namespace Varta.Ui
 
         public void Start()
         {
-            Log.Info("ВАРТА " + AppInfo.Version + " запущено. Папка: " + Paths.AppDir);
+            // Сповіщення «ВАРТУ запущено» немає навмисно: запуск лише в журналі, оповіщення — тільки при зміні стану.
+            Log.Info("ВАРТА " + AppInfo.Version + " запущено. Комп'ютер: " + PcName() + ". Папка: " + Paths.AppDir + ". Опитування кожні " + Settings.PollIntervalSeconds + " с.");
             foreach (string w in StartupWarnings) Log.Warn(w);
             Log.Cleanup(Settings.LogRetentionDays);
             Monitor.Start();
             _tick.Start();
             PreloadSounds();
-            RaiseTech(AlertEventKind.AppStarted, "Комп'ютер: " + PcName() + ". Версія " + AppInfo.Version + ". Опитування кожні " + Settings.PollIntervalSeconds + " с.");
         }
 
         public string PcName()

@@ -87,6 +87,18 @@ namespace Varta.Tests
         }
 
         [Fact]
+        public void Removed_app_started_route_is_dropped_from_old_settings()
+        {
+            var w = new List<string>();
+            AppSettings s = SettingsJson.FromJson("{\"Routes\":{\"AppStarted\":\"banner,tray,admin\",\"AllClear\":\"tray\"}}", w);
+            Assert.Empty(w);
+            Assert.False(s.Routes.ContainsKey("AppStarted"));
+            Assert.Equal(RoutePolicy.Order.Length, s.Routes.Count);
+            Assert.Equal(Channel.Tray, RoutePolicy.Get(s, AlertEventKind.AllClear));
+            Assert.DoesNotContain("AppStarted", SettingsJson.ToJson(s));
+        }
+
+        [Fact]
         public void SplitChannels_handles_links_and_duplicates()
         {
             var l = TextUtil.SplitChannels("@kharkivlife, https://t.me/s/air_alert_ua  t.me/foo_bar?x=1 kharkivlife ab");

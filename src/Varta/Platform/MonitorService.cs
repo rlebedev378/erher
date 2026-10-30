@@ -154,7 +154,10 @@ namespace Varta.Platform
                 SourceReading.Fail("—", ErrorKind.NotConfigured, "не ввімкнено жодного джерела даних (вкладка «Джерела даних»)", DateTime.UtcNow);
             LastReading = reading;
 
+            AlertLevel before = Engine.State.Level;
             List<EngineEvent> events = Engine.OnReading(reading);
+            if (before == AlertLevel.Unknown && Engine.State.Level != AlertLevel.Unknown && !events.Exists(x => RoutePolicy.VoiceCapable(x.Kind)))
+                Log.Info("Стан після запуску: " + Lang.LevelShort(Engine.State.Level) + " (" + reading.SourceName + "). Без оповіщення — сповіщення лише при зміні стану.");
             events.AddRange(Engine.OnTick());
             foreach (EngineEvent e in events)
             {

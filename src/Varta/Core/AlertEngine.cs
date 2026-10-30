@@ -21,10 +21,15 @@ namespace Varta.Core
     /// <summary>
     /// Логіка рівнів: підвищення рівня — миттєво, зниження — після кількох підряд підтверджень,
     /// втрата зв'язку — після кількох невдалих опитувань. Нічого не знає про Windows/UI.
+    /// Перший відомий стан після запуску лише запам'ятовується: оповіщення — тільки при зміні стану.
     /// </summary>
     public sealed class AlertEngine
     {
+        /// <summary>Скільки після запуску чекати, поки ПК підключиться до мережі, перш ніж повідомляти про втрату зв'язку.</summary>
+        public static readonly TimeSpan StartupGrace = TimeSpan.FromMinutes(2);
+
         readonly Func<DateTime> _now;
+        readonly DateTime _startedUtc;
         int _lowerCount;
         AlertLevel _lowerMax = AlertLevel.Unknown;
         DateTime? _firstFailureUtc;
@@ -36,6 +41,7 @@ namespace Varta.Core
         {
             Settings = settings;
             _now = utcNow ?? (() => DateTime.UtcNow);
+            _startedUtc = _now();
         }
 
         /// <summary>Рівень для показу: Unknown, якщо даних давно немає.</summary>
@@ -69,7 +75,8 @@ namespace Varta.Core
                 State.ConsecutiveFailures++;
                 State.LastError = r.Error ?? "";
                 State.LastErrorKind = r.ErrorKind;
-                if (!State.ConnectionLost && State.ConsecutiveFailures >= Settings.FailuresBeforeLost)
+                bool startingUp = !State.LastOkUtc.HasValue && now - _startedUtc < StartupGrace;
+                if (!State.ConnectionLost && !startingUp && State.ConsecutiveFailures >= Settings.FailuresBeforeLost)
                 {
                     State.ConnectionLost = true;
                     TimeSpan down = now - (_firstFailureUtc ?? now);
@@ -98,11 +105,11 @@ namespace Varta.Core
             if (wasLost)
                 ev.Add(new EngineEvent { Kind = AlertEventKind.ConnectionRestored, AtUtc = now, Source = r.SourceName, Downtime = downtime });
 
-            ApplyLevel(r, now, ev);
+            ApplyLevel(r, now, ev, wasLost);
             return ev;
         }
 
-        void ApplyLevel(SourceReading r, DateTime now, List<EngineEvent> ev)
+        void ApplyLevel(SourceReading r, DateTime now, List<EngineEvent> ev, bool afterReportedOutage)
         {
             AlertLevel cur = State.Level;
             AlertLevel target = r.Level;
@@ -110,9 +117,12 @@ namespace Varta.Core
 
             if (cur == AlertLevel.Unknown)
             {
+                // Перший стан після запуску — без оповіщення. Але якщо вже повідомили про втрату зв'язку («стан невідомий»),
+                // відомий тепер рівень — зміна стану, про яку треба сказати.
                 SetLevel(target, r, now);
-                if (target == AlertLevel.Red) ev.Add(Make(AlertEventKind.RedStarted, cur, target, r, now, true));
-                else if (target == AlertLevel.Yellow) ev.Add(Make(AlertEventKind.YellowStarted, cur, target, r, now, true));
+                if (!afterReportedOutage) return;
+                if (target == AlertLevel.Red) ev.Add(Make(AlertEventKind.RedStarted, cur, target, r, now));
+                else if (target == AlertLevel.Yellow) ev.Add(Make(AlertEventKind.YellowStarted, cur, target, r, now));
                 return;
             }
 
@@ -121,9 +131,9 @@ namespace Varta.Core
                 _lowerCount = 0;
                 SetLevel(target, r, now);
                 if (target == AlertLevel.Red)
-                    ev.Add(Make(cur == AlertLevel.Yellow ? AlertEventKind.RedFromYellow : AlertEventKind.RedStarted, cur, target, r, now, false));
+                    ev.Add(Make(cur == AlertLevel.Yellow ? AlertEventKind.RedFromYellow : AlertEventKind.RedStarted, cur, target, r, now));
                 else
-                    ev.Add(Make(AlertEventKind.YellowStarted, cur, target, r, now, false));
+                    ev.Add(Make(AlertEventKind.YellowStarted, cur, target, r, now));
                 return;
             }
 
@@ -142,7 +152,7 @@ namespace Varta.Core
             _lowerCount = 0;
             SetLevel(newLevel, r, now);
             State.SinceUtc = now;
-            ev.Add(Make(newLevel == AlertLevel.Clear ? AlertEventKind.AllClear : AlertEventKind.YellowFromRed, cur, newLevel, r, now, false));
+            ev.Add(Make(newLevel == AlertLevel.Clear ? AlertEventKind.AllClear : AlertEventKind.YellowFromRed, cur, newLevel, r, now));
         }
 
         void SetLevel(AlertLevel lvl, SourceReading r, DateTime now)
@@ -153,9 +163,9 @@ namespace Varta.Core
             State.LastReminderUtc = now;
         }
 
-        EngineEvent Make(AlertEventKind k, AlertLevel from, AlertLevel to, SourceReading r, DateTime now, bool initial)
+        EngineEvent Make(AlertEventKind k, AlertLevel from, AlertLevel to, SourceReading r, DateTime now)
         {
-            return new EngineEvent { Kind = k, From = from, To = to, AtUtc = now, Detail = r.Detail ?? "", Source = r.SourceName, IsInitial = initial };
+            return new EngineEvent { Kind = k, From = from, To = to, AtUtc = now, Detail = r.Detail ?? "", Source = r.SourceName };
         }
 
         /// <summary>Періодичні події (нагадування під час тривоги).</summary>

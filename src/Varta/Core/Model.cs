@@ -5,7 +5,7 @@ namespace Varta.Core
     public static class AppInfo
     {
         public const string Name = "ВАРТА";
-        public const string Version = "1.0.3";
+        public const string Version = "1.0.4";
         public const string Tagline = "Сповіщення про повітряну тривогу";
     }
 
@@ -26,7 +26,6 @@ namespace Varta.Core
         ConnectionRestored,
         AudioProblem,
         ConfigProblem,
-        AppStarted,
         MonitoringPaused,
         MonitoringResumed,
         DailyReport
@@ -65,7 +64,6 @@ namespace Varta.Core
         public string Detail = "";
         public string Source = "";
         public string Message = "";
-        public bool IsInitial;
         public bool IsTest;
         public TimeSpan Downtime;
     }

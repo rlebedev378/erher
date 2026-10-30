@@ -138,6 +138,9 @@ namespace Varta.Core
                 if (!RoutePolicy.VoiceCapable(k)) c &= ~Channel.Voice;
                 Routes[key] = RoutePolicy.ToText(c);
             }
+            // Маршрути подій, яких більше немає (наприклад, «Програму запущено» до 1.0.4).
+            foreach (string name in new List<string>(Routes.Keys))
+                if (!Enum.IsDefined(typeof(AlertEventKind), name)) Routes.Remove(name);
         }
     }
 }
