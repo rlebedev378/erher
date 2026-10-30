@@ -228,12 +228,13 @@ namespace Varta.Platform
                 res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Error, "Не знайдено активного пристрою виводу звуку (колонки/навушники)."));
             else
             {
-                string vol = "Гучність Windows " + (int)Math.Round(a.MasterVolume * 100) + "%" + (a.Muted ? ", звук вимкнено (mute)" : "") + ".";
-                bool low = a.Muted || a.MasterVolume * 100 < 10;
-                if (low && !s.BoostMasterVolume)
-                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Warn, vol + " Оголошення можуть бути не чутні — увімкніть автопідняття гучності.", "goto-sound", "Налаштувати"));
-                else if (low)
-                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Info, vol + " Під час тривоги гучність буде піднято автоматично."));
+                int win = (int)Math.Round(a.MasterVolume * 100);
+                string vol = "Гучність Windows " + win + "%" + (a.Muted ? ", звук вимкнено (mute)" : "") +
+                             "; оголошення звучить на " + s.AnnounceVolumePercent + "% від неї.";
+                if (a.Muted || win == 0)
+                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Warn, vol + " ВАРТА не змінює гучність Windows, тому голос зараз не буде чутно."));
+                else if (win < 10)
+                    res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Info, vol + " Оголошення будуть ледь чутні."));
                 else
                     res.Add(Item("audio-dev", "Пристрій звуку", HealthState.Ok, vol));
             }
