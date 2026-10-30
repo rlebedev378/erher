@@ -127,6 +127,13 @@ namespace Varta.Ui
 
         void OnHealthAction(string id)
         {
+            // Дія перебудовує список (і кнопку, яку щойно натиснули) — виконуємо після завершення кліку.
+            try { BeginInvoke(new Action(() => RunHealthAction(id))); }
+            catch (InvalidOperationException) { RunHealthAction(id); }
+        }
+
+        void RunHealthAction(string id)
+        {
             switch (id)
             {
                 case "resume": _c.Monitor.Resume("вручну"); break;

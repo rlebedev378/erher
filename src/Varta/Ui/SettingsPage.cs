@@ -101,6 +101,15 @@ namespace Varta.Ui
             foreach (var a in _save) a(s);
         }
 
+        /// <summary>Оновити елементи керування без позначки «є незбережені зміни».</summary>
+        protected void Silently(Action a)
+        {
+            bool was = _loading;
+            _loading = true;
+            try { a(); }
+            finally { _loading = was; }
+        }
+
         /// <summary>Дії, що не належать до AppSettings (наприклад, автозапуск у реєстрі).</summary>
         public virtual string ApplyExtras() { return null; }
 
@@ -349,6 +358,7 @@ namespace Varta.Ui
             };
             reset.Click += delegate
             {
+                if (defaultStored.Length > 0) SoundFiles.EnsureDefaults();
                 tb.Text = defaultStored;
                 if (commit()) refresh();
             };
