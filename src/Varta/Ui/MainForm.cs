@@ -329,7 +329,10 @@ namespace Varta.Ui
                     }
                     return;
                 }
-                _exiting = true;
+                // Без трею хрестик означає вихід. Просто закрите вікно лишило б програму без вікна, тож питаємо й виходимо повністю.
+                e.Cancel = true;
+                BeginInvoke(new Action(ConfirmExit));
+                return;
             }
             base.OnFormClosing(e);
         }
