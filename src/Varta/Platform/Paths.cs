@@ -10,8 +10,11 @@ namespace Varta.Platform
         public static readonly string ExePath;
         public static string AppDir { get; private set; }
         public static string DataDir { get; private set; }
+        /// <summary>Куди програма зберігала дані, коли папка програми була недоступна для запису.</summary>
+        public static string LegacyDataDir { get; private set; }
 
         internal static void SetRoots(string appDir, string dataDir) { AppDir = appDir; DataDir = dataDir; }
+        internal static void SetLegacyDataDir(string dir) { LegacyDataDir = dir; }
 
         static Paths()
         {
@@ -19,9 +22,9 @@ namespace Varta.Platform
             ExePath = a.Location;
             AppDir = Path.GetDirectoryName(ExePath);
             if (string.IsNullOrEmpty(AppDir)) AppDir = AppDomain.CurrentDomain.BaseDirectory;
-            DataDir = IsWritable(AppDir)
-                ? AppDir
-                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Varta");
+            LegacyDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Varta");
+            // Дані завжди поруч із Varta.exe; %AppData%\Varta — лише якщо в папку програми писати не можна (наприклад, Program Files).
+            DataDir = IsWritable(AppDir) ? AppDir : LegacyDataDir;
             try { Directory.CreateDirectory(DataDir); } catch { }
         }
 
@@ -29,7 +32,45 @@ namespace Varta.Platform
         public static string LogDir { get { return Path.Combine(DataDir, "logs"); } }
         public static string SoundsDir { get { return Path.Combine(DataDir, "sounds"); } }
         public static string RecoveryFile { get { return Path.Combine(DataDir, "audio-recovery.json"); } }
-        public static bool IsPortableFolder { get { return string.Equals(DataDir, AppDir, StringComparison.OrdinalIgnoreCase); } }
+        public static bool IsPortableFolder { get { return SamePath(DataDir, AppDir); } }
+
+        /// <summary>Програма лежить у тимчасовій папці — найчастіше її запустили просто з ZIP-архіву.</summary>
+        public static bool IsTemporaryLocation { get { return IsTemporaryPath(AppDir); } }
+
+        public static bool IsTemporaryPath(string dir)
+        {
+            if (string.IsNullOrEmpty(dir)) return false;
+            string d = Normalize(dir);
+            if (d == null) return false;
+            // GetTempPath() буває у короткій формі 8.3 (C:\Users\KORIST~1\...), тому перевіряється й повна.
+            string[] temps =
+            {
+                Path.GetTempPath(),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp")
+            };
+            foreach (string t in temps)
+            {
+                string n = Normalize(t);
+                if (n != null && n.Length > 3 && d.StartsWith(n, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        static string Normalize(string dir)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dir)) return null;
+                return Path.GetFullPath(dir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            }
+            catch { return null; }
+        }
+
+        public static bool SamePath(string a, string b)
+        {
+            string x = Normalize(a), y = Normalize(b);
+            return x != null && y != null && string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+        }
 
         public static bool IsWritable(string dir)
         {
@@ -42,6 +83,41 @@ namespace Varta.Platform
                 return true;
             }
             catch { return false; }
+        }
+
+        /// <summary>
+        /// Переносить settings.json і звуки з %AppData%\Varta у папку програми, якщо там їх ще немає
+        /// (програма раніше працювала з папки без права запису). Повертає опис дії для журналу або null.
+        /// </summary>
+        public static string MigrateLegacyData()
+        {
+            try
+            {
+                if (!IsPortableFolder || File.Exists(SettingsFile) || SamePath(LegacyDataDir, DataDir)) return null;
+                string legacySettings = Path.Combine(LegacyDataDir, "settings.json");
+                if (!File.Exists(legacySettings)) return null;
+
+                int sounds = 0;
+                string legacySounds = Path.Combine(LegacyDataDir, "sounds");
+                if (Directory.Exists(legacySounds))
+                {
+                    Directory.CreateDirectory(SoundsDir);
+                    foreach (string f in Directory.GetFiles(legacySounds))
+                    {
+                        string target = Path.Combine(SoundsDir, Path.GetFileName(f));
+                        if (File.Exists(target)) continue;
+                        File.Copy(f, target);
+                        sounds++;
+                    }
+                }
+                // settings.json — останнім: якщо копіювання звуків зірветься, наступний запуск повторить перенесення.
+                File.Copy(legacySettings, SettingsFile, false);
+                return "Налаштування" + (sounds > 0 ? " і звуки (" + sounds + ")" : "") + " перенесено з " + LegacyDataDir + " у папку програми " + DataDir + ".";
+            }
+            catch (Exception ex)
+            {
+                return "Не вдалося перенести налаштування з " + LegacyDataDir + ": " + ex.Message;
+            }
         }
 
         static string Fix(string p)
