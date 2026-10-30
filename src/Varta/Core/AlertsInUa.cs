@@ -153,7 +153,8 @@ namespace Varta.Core
             ErrorKind kind;
             string msg;
             if (r.TimedOut) { kind = ErrorKind.Timeout; msg = "час очікування відповіді вичерпано"; }
-            else if (r.Status == 401 || r.Status == 403) { kind = ErrorKind.Unauthorized; msg = "ключ недійсний або доступ заборонено (HTTP " + r.Status + ")"; }
+            else if (r.Status == 401) { kind = ErrorKind.Unauthorized; msg = "ключ відсутній, неправильний, відкликаний або прострочений (HTTP 401)"; }
+            else if (r.Status == 403) { kind = ErrorKind.Forbidden; msg = "доступ заборонено: IP-адресу заблоковано або API недоступне з вашої країни (HTTP 403)"; }
             else if (r.Status == 429) { kind = ErrorKind.RateLimited; msg = "перевищено ліміт запитів (HTTP 429)"; }
             else if (r.Status >= 500) { kind = ErrorKind.ServerError; msg = "помилка сервера (HTTP " + r.Status + ")"; }
             else if (r.Status > 0) { kind = ErrorKind.Network; msg = "несподівана відповідь (HTTP " + r.Status + ")"; }
